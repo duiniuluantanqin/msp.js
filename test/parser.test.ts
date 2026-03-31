@@ -37,23 +37,29 @@ describe('MSPParser', () => {
 
   it('should parse mpegts.js SEIData format', () => {
     const uuid = new Uint8Array([
-      0x83, 0xA1, 0x61, 0xC4,
-      0x31, 0xA7, 0x4B, 0xD8,
-      0xA6, 0x93, 0x52, 0x11,
-      0x3A, 0x41, 0x10, 0x7E
+      0x4D, 0x45, 0x54, 0x41,
+      0x44, 0x41, 0x54, 0x41,
+      0x53, 0x45, 0x49, 0x42,
+      0x59, 0x43, 0x48, 0x42
     ]);
 
+    // payload: version=1, timestamp=100ms, reserved1=0, reserved2=0, object_count=1
+    // obj[0]: id=256, type=1, confidence=240/255≈0.941, cx=16384/65535≈0.25,
+    //         cy=16384/65535≈0.25, w=8192/65535≈0.125, h=8192/65535≈0.125, distance=1000000
     const userData = new Uint8Array([
-      0x02,
-      0x01,
-      0x00, 0x00, 0x00, 0x64,
-      0x00,
-      0x00, 0x01,
-      0xF0,
-      0x40, 0x00,
-      0x40, 0x00,
-      0x20, 0x00,
-      0x20, 0x00
+      0x01,                               // version
+      0x00, 0x00, 0x00, 0x64,             // timestamp (big-endian)
+      0x00,                               // reserved1
+      0x00,                               // reserved2
+      0x01,                               // object_count
+      0x01, 0x00,                         // id = 256
+      0x01,                               // type = 1
+      0xF0,                               // confidence = 240
+      0x40, 0x00,                         // cx = 16384
+      0x40, 0x00,                         // cy = 16384
+      0x20, 0x00,                         // w = 8192
+      0x20, 0x00,                         // h = 8192
+      0x00, 0x0F, 0x42, 0x40              // distance = 1000000 (big-endian)
     ]);
 
     const seiData = {
@@ -73,30 +79,47 @@ describe('MSPParser', () => {
     const detection = result?.detections[0];
     expect(detection?.type).toBe(1);
     expect(detection?.confidence).toBeCloseTo(0.941, 2);
-    expect(detection?.bbox.x).toBeCloseTo(0.25, 2);
-    expect(detection?.bbox.y).toBeCloseTo(0.25, 2);
+    expect(detection?.bbox.cx).toBeCloseTo(0.25, 2);
+    expect(detection?.bbox.cy).toBeCloseTo(0.25, 2);
     expect(detection?.bbox.width).toBeCloseTo(0.125, 2);
     expect(detection?.bbox.height).toBeCloseTo(0.125, 2);
   });
 
   it('should parse multiple detections', () => {
     const uuid = new Uint8Array([
-      0x83, 0xA1, 0x61, 0xC4,
-      0x31, 0xA7, 0x4B, 0xD8,
-      0xA6, 0x93, 0x52, 0x11,
-      0x3A, 0x41, 0x10, 0x7E
+      0x4D, 0x45, 0x54, 0x41,
+      0x44, 0x41, 0x54, 0x41,
+      0x53, 0x45, 0x49, 0x42,
+      0x59, 0x43, 0x48, 0x42
     ]);
 
+    // payload: version=1, timestamp=200ms, reserved1=0, reserved2=0, object_count=2
+    // obj[0]: id=256, type=1, confidence=224/255≈0.878, cx=32768/65535≈0.5,
+    //         cy=24576/65535≈0.375, w=12288/65535≈0.187, h=16384/65535≈0.25, distance=500000
+    // obj[1]: id=512, type=2, confidence=192/255≈0.753, cx=16384/65535≈0.25,
+    //         cy=9830/65535≈0.15, w=6144/65535≈0.094, h=8192/65535≈0.125, distance=300000
     const userData = new Uint8Array([
-      0x02,
-      0x02,
-      0x00, 0x00, 0x00, 0x64,
-      0x00, 0x00, 0x01, 0xF0,
-      0x40, 0x00, 0x40, 0x00,
-      0x20, 0x00, 0x20, 0x00,
-      0x01, 0x00, 0x02, 0xE0,
-      0x80, 0x00, 0x60, 0x00,
-      0x30, 0x00, 0x40, 0x00
+      0x01,                               // version
+      0x00, 0x00, 0x00, 0xC8,             // timestamp (big-endian)
+      0x00,                               // reserved1
+      0x00,                               // reserved2
+      0x02,                               // object_count
+      0x01, 0x00,                         // id = 256
+      0x01,                               // type = 1
+      0xE0,                               // confidence = 224
+      0x80, 0x00,                         // cx = 32768
+      0x60, 0x00,                         // cy = 24576
+      0x30, 0x00,                         // w = 12288
+      0x40, 0x00,                         // h = 16384
+      0x00, 0x07, 0xA1, 0x20,            // distance = 500000 (big-endian)
+      0x02, 0x00,                         // id = 512
+      0x02,                               // type = 2
+      0xC0,                               // confidence = 192
+      0x40, 0x00,                         // cx = 16384
+      0x26, 0x66,                         // cy = 9830
+      0x18, 0x00,                         // w = 6144
+      0x20, 0x00,                         // h = 8192
+      0x00, 0x04, 0x93, 0xE0             // distance = 300000 (big-endian)
     ]);
 
     const seiData = {
@@ -115,7 +138,8 @@ describe('MSPParser', () => {
 
   it('should return null for wrong UUID', () => {
     const wrongUuid = new Uint8Array(16).fill(0xFF);
-    const userData = new Uint8Array([0x02, 0x00, 0x00, 0x00, 0x00, 0x00]);
+    // payload byteLength >= 8 so it passes the length check
+    const userData = new Uint8Array([0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00]);
 
     const seiData = {
       type: 5,
@@ -131,16 +155,14 @@ describe('MSPParser', () => {
 
   it('should return null for wrong version', () => {
     const uuid = new Uint8Array([
-      0x83, 0xA1, 0x61, 0xC4,
-      0x31, 0xA7, 0x4B, 0xD8,
-      0xA6, 0x93, 0x52, 0x11,
-      0x3A, 0x41, 0x10, 0x7E
+      0x4D, 0x45, 0x54, 0x41,
+      0x44, 0x41, 0x54, 0x41,
+      0x53, 0x45, 0x49, 0x42,
+      0x59, 0x43, 0x48, 0x42
     ]);
 
-    const userData = new Uint8Array([
-      0x01,
-      0x00, 0x00, 0x00, 0x00, 0x00
-    ]);
+    // version=99 (unsupported), followed by 7 bytes of zeros (total 8)
+    const userData = new Uint8Array([0x63, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00]);
 
     const seiData = {
       type: 5,
@@ -156,17 +178,14 @@ describe('MSPParser', () => {
 
   it('should handle empty detections', () => {
     const uuid = new Uint8Array([
-      0x83, 0xA1, 0x61, 0xC4,
-      0x31, 0xA7, 0x4B, 0xD8,
-      0xA6, 0x93, 0x52, 0x11,
-      0x3A, 0x41, 0x10, 0x7E
+      0x4D, 0x45, 0x54, 0x41,
+      0x44, 0x41, 0x54, 0x41,
+      0x53, 0x45, 0x49, 0x42,
+      0x59, 0x43, 0x48, 0x42
     ]);
 
-    const userData = new Uint8Array([
-      0x02,
-      0x00,
-      0x00, 0x00, 0x00, 0x00
-    ]);
+    // version=2, timestamp=0, reserved1=0, reserved2=0, object_count=0
+    const userData = new Uint8Array([0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00]);
 
     const seiData = {
       type: 5,

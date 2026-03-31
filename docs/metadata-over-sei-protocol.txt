@@ -1,209 +1,290 @@
-MSP — Metadata over SEI Protocol
+MSP - 基于 SEI 的元数据协议
 
-Abstract
+摘要
 
-This document defines MSP, an in-band video metadata protocol that embeds structured metadata into H.264 and H.265 video streams using SEI user_data_unregistered messages (payload type 5). The protocol enables frame-synchronous metadata transport without requiring out-of-band signaling channels.
+本文档定义 MSP（Metadata over SEI Protocol）协议。该协议通过 H.264/H.265 的 SEI user_data_unregistered 消息承载结构化目标元数据，使元数据能够与视频帧进行帧级同步传输，而无需额外的带外信令通道。
 
-Status of This Memo
+本文档状态
 
-This document is an informational specification describing the MSP protocol. It may be updated or extended in future versions.
+本文档为信息性协议说明，用于定义当前版本的 MSP 负载格式。后续版本可在兼容性规则下扩展字段或新增版本号。
 
-1. Introduction
+1. 引言
 
-Modern video processing systems often require auxiliary metadata to be tightly synchronized with video frames. Existing approaches rely on out-of-band signaling or container-based metadata, which introduce latency and complexity.
+在视频分析、检测框叠加和多目标跟踪等场景中，业务系统通常需要将检测结果与对应视频帧严格对齐。若使用带外信令传输元数据，往往会引入额外链路、同步复杂度和时延问题。
 
-MSP defines an in-band mechanism for embedding structured metadata directly within video elementary streams using SEI messages. This allows metadata to travel alongside video frames with minimal overhead and precise synchronization.
+MSP 定义了一种带内封装机制：将结构化目标信息直接写入视频码流中的 SEI 消息，使元数据随视频流一同传输，并与承载它的帧保持同步关系。
 
-2. Terminology
+2. 术语
 
-In-band
-Metadata transported within the same elementary stream as video
+带内传输
+在同一视频基本流中承载元数据，而不是使用独立信道。
 
 SEI
-Supplemental Enhancement Information in H.264/H.265
+H.264/H.265 中的补充增强信息（Supplemental Enhancement Information）。
 
 user_data_unregistered
-SEI payload type 5 identified by UUID
+SEI 负载类型 5，通过 UUID 标识私有数据格式。
 
-Frame-synchronous
-Metadata aligned with a specific decoded video frame
+负载
+封装在 SEI 消息中的二进制数据内容。
 
-Payload
-Binary data carried inside SEI
+目标记录
+描述一个检测目标的结构体 msp_obj_data。
 
-3. Overview
+3. 协议概览
 
-MSP operates as an in-band metadata encapsulation protocol carried within video streams.
+MSP 是一种运行在视频流中的轻量级元数据封装协议。
 
-Each metadata unit is encapsulated inside an SEI user_data_unregistered message and associated with a specific video frame.
+每一条 MSP 消息均封装在单个 SEI user_data_unregistered 消息内，并与该 SEI 所属的视频帧相关联。MSP 负载由一个固定头部和若干个变长目标记录组成，其中目标记录数量由 object_count 指定。
 
-The protocol is designed to be lightweight, extensible, and independent of higher-level transport mechanisms.
+4. 协议工作方式
 
-4. Protocol Operation
+4.1 基本流程
 
-4.1 General
+发送端将 MSP 负载写入视频流中的 SEI user_data_unregistered 消息。
 
-A sender embeds MSP payload into SEI messages within the video stream.
+接收端从视频流中提取 SEI 消息，根据 UUID 判断是否为 MSP 数据；若匹配，则按本文档定义的结构解析负载。
 
-A receiver extracts SEI messages, identifies MSP payload using UUID, and parses the metadata.
+4.2 封装方式
 
-4.2 Encapsulation
+每条 MSP 消息必须完整放入一个 SEI user_data_unregistered 消息中。
 
-Each MSP message SHALL be carried in a single SEI user_data_unregistered message.
-
-The SEI payload SHALL be structured as:
+SEI 负载格式如下：
 
 UUID
 MSP payload
 
-4.3 UUID Identification
+4.3 UUID 标识
 
-The following UUID is assigned to MSP:
+MSP 使用如下 UUID：
 
-6368622d-564d5350-2d76312d-000000000001
+4d455441-4441-5441-5345-494259434842
 
-Receivers MUST use the UUID to determine whether the SEI payload contains MSP data.
+接收端必须使用该 UUID 来判断当前 SEI 负载是否为 MSP 数据。
 
-4.4 MSP Payload Format
+4.4 MSP 负载定义
 
-MSP payload is a compact binary structure designed for in-band transmission inside SEI user_data_unregistered (payload type 5).
+MSP 负载使用如下 C 风格结构定义：
 
-The payload layout is defined as follows:
+typedef struct {
+    uint8_t  version;          // 版本号
+    uint32_t timestamp;        // 时间戳（单位：ms）
+    uint8_t  reserved1;        // 保留字段
+    uint8_t  reserved2;        // 保留字段
+    uint8_t  object_count;     // 紧随其后的是 object_count 个 msp_obj_data
+    msp_obj_data obj_data[1];  // 变长数组起点：实际元素数量由 object_count 决定
+} payload;
+
+typedef struct {
+    uint16_t id;         // 目标实例 ID
+    uint8_t  type;       // 目标类别
+    uint8_t  confidence; // 置信度
+    uint16_t cx;         // 框中心 X
+    uint16_t cy;         // 框中心 Y
+    uint16_t w;          // 框宽
+    uint16_t h;          // 框高
+    uint32_t distance;   // 距离（mm）
+} msp_obj_data;
+
+说明：
+
+1. obj_data[1] 仅表示变长数组起点，实际元素数量由 object_count 决定。
+2. 当 object_count 为 0 时，负载中不包含任何目标记录。
+3. 文中 payload 头部固定长度按 8 字节计算，不包含任何 msp_obj_data 数据。
+
+4.4.1 字节序
+
+除单字节字段外，多字节整数均使用网络字节序（big-endian）编码。
+
+因此，下列字段必须按大端序写入和解析：
+
+1. timestamp
+2. id
+3. cx
+4. cy
+5. w
+6. h
+7. distance
+
+4.4.2 负载字节布局
+
+payload 的固定头部布局如下：
 
   0                   1                   2                   3
   0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
- |  version (=2)  | object_count  |         timestamp[31..16]     |
+ |    version    |                  timestamp                    |
  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
- |         timestamp[15..0]       |   (objects... continues)      |
+ |                  timestamp                    |   reserved1   |
+ +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+ |   reserved2   | object_count  |
+ +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+ |                obj_data[0] ...（若存在）                     |
  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 
-Fields:
+字段说明：
 
-1. version (u8)
-2. object_count (u8)
-3. timestamp (u32, big-endian)
-4. objects (array of object_count entries, each 12 bytes)
+1. version（uint8_t，1 字节）
+2. timestamp（uint32_t，4 字节）
+3. reserved1（uint8_t，1 字节）
+4. reserved2（uint8_t，1 字节）
+5. object_count（uint8_t，1 字节）
+6. obj_data（object_count 个目标记录，每个 16 字节）
 
-Header:
+语义说明：
 
-- version
-  Fixed value 2.
+version
+协议版本号。当前文档定义的版本建议固定为 1。接收端如遇到未知版本，应拒绝解析或按版本兼容策略处理。
 
-- object_count
-  Number of objects encoded in the payload.
-  Valid range is 0 to 255.
+timestamp
+32 位无符号时间戳，单位为毫秒。其参考时钟由具体业务约定决定，例如采集时刻、编码时刻或渲染时刻。
 
-- timestamp
-  32-bit unsigned timestamp encoded in network byte order (big-endian).
+reserved1
+保留字段，当前版本发送端应写 0，接收端应忽略其值。
 
-Implementation note:
+reserved2
+保留字段，当前版本发送端应写 0，接收端应忽略其值。
 
-- If the number of detected objects exceeds 255, only the first 255 objects SHALL be encoded.
+object_count
+当前负载中包含的目标记录数量，取值范围为 0 到 255。
 
----
+实现建议：
 
-4.4.1 Object Record (12 bytes)
+如果待发送目标数量超过 255，发送端应只编码前 255 个目标，或由上层业务自行分片。
 
-Each object is serialized using the following layout:
+4.4.3 目标记录格式
+
+每个 msp_obj_data 的长度固定为 16 字节，布局如下：
 
   0                   1                   2                   3
   0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
- |   object_id    |              type             | confidence_q |
+ |             id                |    type       |  confidence   |
  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
- |              x_q              |              y_q              |
+ |             cx                |             cy                |
  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
- |              w_q              |              h_q              |
+ |              w                |              h                |
+ +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+ |                         distance                              |
  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 
-Fields:
+字段说明：
 
-1. object_id (u8)
-2. type (u16, big-endian)
-3. confidence_q (u8)
-4. x_q (u16, big-endian)
-5. y_q (u16, big-endian)
-6. w_q (u16, big-endian)
-7. h_q (u16, big-endian)
+1. id（uint16_t）
+2. type（uint8_t）
+3. confidence（uint8_t）
+4. cx（uint16_t）
+5. cy（uint16_t）
+6. w（uint16_t）
+7. h（uint16_t）
+8. distance（uint32_t）
 
-object_id semantics:
+语义说明：
 
-- 0 to 254: valid object identifier
-- 255: invalid, missing, or overflow identifier
+id
+目标实例 ID，用于在连续帧中标识同一目标实例。
 
----
+type
+目标类别编号，类别码表由上层业务定义。
 
-4.4.2 Quantization Rules
+confidence
+置信度量化值，使用 0 到 255 的无符号整数表达。其原始语义值为归一化浮点数区间 [0, 1]，协议中按 1 字节进行线性量化存储。
 
-Input values are expected to be normalized to the range [0, 1].
+cx / cy
+检测框中心点坐标的量化值。其原始语义值为归一化浮点数区间 [0, 1]，协议中按 2 字节无符号整数进行线性量化存储。
 
-4.4.3 Confidence
+w / h
+检测框宽度和高度的量化值。其原始语义值为归一化浮点数区间 [0, 1]，协议中按 2 字节无符号整数进行线性量化存储。
 
-Encoding:
+distance
+目标距离，单位为毫米（mm）。
+
+4.4.4 归一化字段的量化规则
+
+以下字段在业务语义上均为归一化值，范围为 [0, 1]，但在 MSP 负载中以整数形式编码：
+
+1. confidence 使用 1 字节量化，换算基数为 255
+2. cx、cy、w、h 使用 2 字节量化，换算基数为 65535
+
+confidence 编码与解码规则：
+
+编码：
 confidence_q = round(clamp(confidence, 0, 1) * 255)
 
-Decoding:
+解码：
 confidence = confidence_q / 255.0
 
----
+cx、cy、w、h 编码与解码规则相同：
 
-4.4.4 Bounding Box
-
-Applied independently to x, y, w, h:
-
-Encoding:
+编码：
 q = round(clamp(v, 0, 1) * 65535)
 
-Decoding:
+解码：
 v = q / 65535.0
 
----
+说明：
 
-4.4.5 Length Calculation
+1. confidence_q 表示协议中实际存储的 confidence 字段值。
+2. q 表示协议中实际存储的 cx、cy、w 或 h 字段值。
+3. 发送端在编码前应先将输入值裁剪到 [0, 1]。
+4. 接收端解析后，如需恢复业务语义中的归一化值，应按上述公式反量化。
 
-Let N = object_count.
+4.4.5 长度计算
 
-- MSP payload size:
-  6 + 12 * N bytes
+设 N = object_count。
 
-- Full SEI user_data_unregistered payload size:
-  16 + 6 + 12 * N bytes
+MSP 负载长度：
+8 + 16 * N 字节
 
-Where:
+完整 SEI user_data_unregistered 负载长度：
+16 + 8 + 16 * N 字节
 
-- 16 bytes = UUID
-- remaining bytes = MSP payload
+其中：
 
-4.5 Synchronization
+1. 16 字节为 UUID
+2. 8 字节为 MSP 固定头部
+3. 16 * N 字节为目标记录数组
 
-Each MSP message is associated with the video frame that carries the SEI.
+4.4.6 解析要求
 
-When available, presentation timestamps SHOULD be used for alignment.
+接收端在解析 MSP 负载时应至少进行以下校验：
 
-5. Protocol Extensions
+1. 负载长度不得小于 8 字节。
+2. 负载总长度必须满足 8 + 16 * object_count。
+3. 多字节字段需按大端序解析。
+4. 当 version 不受支持时，应安全返回错误，不得继续按错误结构解析。
 
-Future extensions MAY introduce additional payload types, flags, or optional fields.
+5. 同步语义
 
-Receivers MUST ignore unknown extensions.
+每条 MSP 消息与承载该 SEI 的视频帧关联。
 
-6. Security Considerations
+如果系统同时具备视频时间戳与 MSP timestamp，可由上层使用两者进行进一步对齐；但协议本身默认认为 SEI 所属帧即为当前元数据对应帧。
 
-Implementations SHOULD validate payload size and structure to prevent malformed data and buffer overflow.
+6. 扩展与兼容性
 
-Since MSP is in-band, corrupted metadata may affect decoding pipelines and SHOULD be handled safely.
+后续版本可以通过以下方式扩展协议：
 
-7. IANA Considerations
+1. 提升 version 版本号并重新定义负载结构
+2. 复用 reserved1、reserved2 引入标志位
+3. 扩展 type 的类别映射语义
 
-This document does not define any IANA registries.
+兼容性建议：
 
-Future versions MAY define namespace or identifier registries for MSP extensions.
+1. 当前版本发送端应将保留字段置 0。
+2. 当前版本接收端应忽略保留字段。
+3. 新版本如改变结构布局，应同步修改 version。
 
-8. Acknowledgements
+7. 安全性考虑
 
-This protocol design is inspired by existing in-band metadata systems and video signaling mechanisms.
+实现时应严格校验负载长度、字段边界和 object_count 与实际字节数的一致性，避免因异常 SEI 数据导致越界访问、错误解析或缓冲区溢出。
 
-9. References
+对于损坏、截断或伪造的元数据，接收端应以安全失败方式处理，例如丢弃该条 SEI 负载并记录错误日志。
 
-H.264 and H.265 specifications
-SEI user_data_unregistered definition
+8. IANA 考虑
+
+本文档不涉及任何 IANA 注册表。
+
+9. 参考
+
+1. H.264 / H.265 规范中的 SEI 定义
+2. SEI user_data_unregistered 负载格式

@@ -51,6 +51,10 @@
           <h3>标签字段</h3>
           <div class="checkbox-group">
             <label>
+              <input type="checkbox" id="showObjectId" checked>
+              显示对象 ID
+            </label>
+            <label>
               <input type="checkbox" id="showType" checked>
               显示类型
             </label>
@@ -87,7 +91,7 @@
                   <option value="#722ed1" style="color: #722ed1;">■ 紫色</option>
                   <option value="custom">■ 自定义</option>
                 </select>
-                <input type="color" id="type1Color" value="#666666" class="custom-color-input" aria-label="类型 1 颜色">
+                <input type="color" id="type1Color" value="#ff4d4f" class="custom-color-input" aria-label="类型 1 颜色">
               </div>
             </div>
 
@@ -106,7 +110,7 @@
                   <option value="#722ed1" style="color: #722ed1;">■ 紫色</option>
                   <option value="custom">■ 自定义</option>
                 </select>
-                <input type="color" id="type2Color" value="#999999" class="custom-color-input" aria-label="类型 2 颜色">
+                <input type="color" id="type2Color" value="#52c41a" class="custom-color-input" aria-label="类型 2 颜色">
               </div>
             </div>
           </div>
@@ -130,6 +134,7 @@
       const videoContainer = document.getElementById('videoContainer');
       const globalLineWidth = document.getElementById('globalLineWidth');
       const globalLineWidthValue = document.getElementById('globalLineWidthValue');
+      const showObjectId = document.getElementById('showObjectId');
       const showType = document.getElementById('showType');
       const showConfidence = document.getElementById('showConfidence');
       const type1Color = document.getElementById('type1Color');
@@ -146,7 +151,7 @@
       const overlay = new msp.MSPOverlay({
         maxDetectionFrames: 100,
         lineWidth: 2,
-        labelFields: ['type', 'confidence']
+        labelFields: ['object_id', 'type', 'confidence']
       });
 
       overlay.attachMedia(videoElement);
@@ -167,6 +172,7 @@
 
       function updateLabelFields() {
         const fields = [];
+        if (showObjectId.checked) fields.push('object_id');
         if (showType.checked) fields.push('type');
         if (showConfidence.checked) fields.push('confidence');
         overlay.configure({ labelFields: fields });
@@ -386,6 +392,7 @@
         overlay.configure({ lineWidth: parseInt(event.target.value, 10) });
       };
 
+      showObjectId.onchange = updateLabelFields;
       showType.onchange = updateLabelFields;
       showConfidence.onchange = updateLabelFields;
       colorSelects.forEach(bindColorSelect);

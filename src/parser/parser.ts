@@ -2,18 +2,21 @@ import {
   buffersAreEqual,
   quantizedByteToUnit,
   quantizedWordToUnit,
-  readUint16BE
+  readUint16BE,
+  readUint32BE
 } from '../utils/utils';
 
 export interface MSPDetection {
+  object_id: number;
   type: number;
   confidence: number;
   bbox: {
-    x: number;
-    y: number;
+    cx: number;
+    cy: number;
     width: number;
     height: number;
   };
+  distance: number; // mm
 }
 
 export interface MSPData {
@@ -29,11 +32,10 @@ export interface SEIData {
   pts?: number;
 }
 
+const MSP_VERSION_V1 = 1;
 const MSP_UUID_V1 = new Uint8Array([
-  0x83, 0xA1, 0x61, 0xC4,
-  0x31, 0xA7, 0x4B, 0xD8,
-  0xA6, 0x93, 0x52, 0x11,
-  0x3A, 0x41, 0x10, 0x7E
+  0x4D, 0x45, 0x54, 0x41, 0x44, 0x41, 0x54, 0x41,
+  0x53, 0x45, 0x49, 0x42, 0x59, 0x43, 0x48, 0x42
 ]);
 
 export class MSPParser {
@@ -71,49 +73,47 @@ export class MSPParser {
   }
 
   private parseMSP_V1(payload: Uint8Array): MSPDetection[] | null {
-    if (!payload || payload.byteLength < 6) {
+    if (!payload || payload.byteLength < 8) {
       return null;
     }
 
     const version = payload[0];
-    if (version !== 2) {
+    if (version !== MSP_VERSION_V1) {
       console.warn(`Unsupported Compact Payload version: ${version}`);
       return null;
     }
 
-    const declaredObjectCount = payload[1];
-    const availableObjectCount = Math.min(
-      declaredObjectCount,
-      Math.floor((payload.byteLength - 6) / 12)
-    );
-
-    if (availableObjectCount === 0) {
-      return null;
-    }
+    // const timestamp = readUint32BE(payload, 1);
+    // const reserved1 = payload[5]; const reserved2 = payload[6];
+    const objectCount = payload[7];
 
     const detections: MSPDetection[] = [];
-    let offset = 6;
+    let offset = 8;
 
-    for (let i = 0; i < availableObjectCount; i++) {
-      const objectType = readUint16BE(payload, offset + 1);
+    for (let i = 0; i < objectCount; i++) {
+      const objectID = readUint16BE(payload, offset);
+      const objectType = payload[offset + 2];
       const confidenceQ = payload[offset + 3];
       const xQ = readUint16BE(payload, offset + 4);
       const yQ = readUint16BE(payload, offset + 6);
       const wQ = readUint16BE(payload, offset + 8);
       const hQ = readUint16BE(payload, offset + 10);
+      const d = readUint32BE(payload, offset + 12);
 
       detections.push({
+        object_id: objectID,
         type: objectType,
         confidence: quantizedByteToUnit(confidenceQ),
         bbox: {
-          x: quantizedWordToUnit(xQ),
-          y: quantizedWordToUnit(yQ),
+          cx: quantizedWordToUnit(xQ),
+          cy: quantizedWordToUnit(yQ),
           width: quantizedWordToUnit(wQ),
           height: quantizedWordToUnit(hQ)
-        }
+        },
+        distance: d
       });
 
-      offset += 12;
+      offset += 16;
     }
 
     return detections;

@@ -9,7 +9,7 @@ describe('MSPOverlay', () => {
     overlay = new MSPOverlay({
       boxColor: '#30d6b0',
       lineWidth: 2,
-      labelFields: ['type', 'confidence']
+      labelFields: ['object_id', 'type', 'confidence']
     });
 
     videoElement = document.createElement('video');
@@ -53,6 +53,7 @@ describe('MSPOverlay', () => {
       pts: 0,
       detections: [
         {
+          object_id: 1,
           type: 1,
           confidence: 0.95,
           bbox: { x: 0.1, y: 0.1, width: 0.2, height: 0.15 }
@@ -70,6 +71,7 @@ describe('MSPOverlay', () => {
       pts: 0,
       detections: [
         {
+          object_id: 2,
           type: 1,
           confidence: 0.95,
           bbox: { x: 100, y: 100, width: 200, height: 150 }

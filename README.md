@@ -37,7 +37,7 @@ overlay.pushData({
 
 `pushData()` expects raw SEI payload data and parses it into detections internally.
 
-For parsed detections, `bbox.x` and `bbox.y` are center coordinates.
+For parsed detections, `bbox.cx` and `bbox.cy` are center coordinates.
 
 ## Build
 

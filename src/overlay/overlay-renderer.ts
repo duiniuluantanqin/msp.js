@@ -4,14 +4,14 @@ import { getTypeLabel } from './type-labels';
 export interface TypeConfig {
   boxColor?: string;
   lineWidth?: number;
-  labelFields?: Array<'type' | 'confidence' | 'bbox'>;
+  labelFields?: Array<'object_id' | 'type' | 'confidence' | 'bbox'>;
 }
 
 export interface OverlayRendererConfig {
   maxDetectionFrames?: number;
   boxColor?: string | null;
   lineWidth?: number;
-  labelFields?: Array<'type' | 'confidence' | 'bbox'>;
+  labelFields?: Array<'object_id' | 'type' | 'confidence' | 'bbox'>;
   typeConfigs?: Record<number, TypeConfig>;
 }
 
@@ -35,8 +35,11 @@ export class OverlayRenderer {
     maxDetectionFrames: 100,
     boxColor: '#30d6b0',
     lineWidth: 2,
-    labelFields: ['type', 'confidence', 'bbox'],
-    typeConfigs: {}
+    labelFields: ['object_id', 'type', 'confidence', 'bbox'],
+    typeConfigs: {
+      1: { boxColor: '#ff4d4f' },
+      2: { boxColor: '#52c41a' }
+    }
   };
 
   constructor(config?: OverlayRendererConfig) {
@@ -244,15 +247,15 @@ export class OverlayRenderer {
     let height: number;
 
     if (isNormalized) {
-      centerX = videoRect.x + (detection.bbox.x * videoRect.width);
-      centerY = videoRect.y + (detection.bbox.y * videoRect.height);
+      centerX = videoRect.x + (detection.bbox.cx * videoRect.width);
+      centerY = videoRect.y + (detection.bbox.cy * videoRect.height);
       width = detection.bbox.width * videoRect.width;
       height = detection.bbox.height * videoRect.height;
     } else {
       const scaleX = this.mediaElement.videoWidth ? (videoRect.width / this.mediaElement.videoWidth) : 0;
       const scaleY = this.mediaElement.videoHeight ? (videoRect.height / this.mediaElement.videoHeight) : 0;
-      centerX = videoRect.x + (detection.bbox.x * scaleX);
-      centerY = videoRect.y + (detection.bbox.y * scaleY);
+      centerX = videoRect.x + (detection.bbox.cx * scaleX);
+      centerY = videoRect.y + (detection.bbox.cy * scaleY);
       width = detection.bbox.width * scaleX;
       height = detection.bbox.height * scaleY;
     }
@@ -270,11 +273,14 @@ export class OverlayRenderer {
     }
   }
 
-  private buildLabel(detection: MSPDetection, fields: Array<'type' | 'confidence' | 'bbox'>): string {
+  private buildLabel(detection: MSPDetection, fields: Array<'object_id' | 'type' | 'confidence' | 'bbox'>): string {
     const parts: string[] = [];
 
     fields.forEach((field) => {
       switch (field) {
+        case 'object_id':
+          parts.push(`ID:${detection.object_id}`);
+          break;
         case 'type':
           parts.push(getTypeLabel(detection.type));
           break;
@@ -286,10 +292,10 @@ export class OverlayRenderer {
           const isNormalized = this.isNormalizedBbox(detection);
           if (isNormalized) {
             parts.push(
-              `${(bbox.x * 100).toFixed(1)},${(bbox.y * 100).toFixed(1)},${(bbox.width * 100).toFixed(1)},${(bbox.height * 100).toFixed(1)}%`
+              `${(bbox.cx * 100).toFixed(1)},${(bbox.cy * 100).toFixed(1)},${(bbox.width * 100).toFixed(1)},${(bbox.height * 100).toFixed(1)}%`
             );
           } else {
-            parts.push(`${Math.round(bbox.x)},${Math.round(bbox.y)},${Math.round(bbox.width)},${Math.round(bbox.height)}`);
+            parts.push(`${Math.round(bbox.cx)},${Math.round(bbox.cy)},${Math.round(bbox.width)},${Math.round(bbox.height)}`);
           }
           break;
         }
@@ -320,8 +326,8 @@ export class OverlayRenderer {
   }
 
   private isNormalizedBbox(detection: MSPDetection): boolean {
-    const { x, y, width, height } = detection.bbox;
-    return x <= 1 && y <= 1 && width <= 1 && height <= 1;
+    const { cx, cy, width, height } = detection.bbox;
+    return cx <= 1 && cy <= 1 && width <= 1 && height <= 1;
   }
 
   private getDisplayedVideoRect(): VideoRect {
