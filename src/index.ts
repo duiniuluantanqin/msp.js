@@ -1,3 +1,3 @@
 export { MSPOverlay } from './overlay/msp-overlay';
-export type { OverlayRendererConfig, TypeConfig } from './overlay/overlay-renderer';
-export type { MSPDetection, MSPData, SEIData } from './parser/parser';
+export type { OverlayRendererConfig, TextConfig, TypeConfig } from './overlay/overlay-renderer';
+export type { MSPBoundingBox, MSPDetection, MSPData, MSPTextOverlay, SEIData } from './parser/parser';

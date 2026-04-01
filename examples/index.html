@@ -27,21 +27,6 @@
             value="http://192.168.88.91:7777/live/livestream1.live.ts"
           >
         </div>
-
-        <div class="status-bar">
-          <div class="status-item">
-            <span>播放器状态</span>
-            <strong id="playerStatus">未初始化</strong>
-          </div>
-          <div class="status-item">
-            <span>MSP 帧数</span>
-            <strong id="mspFrameCount">0</strong>
-          </div>
-          <div class="status-item">
-            <span>当前时间</span>
-            <strong id="currentTime">0.00s</strong>
-          </div>
-        </div>
       </div>
 
       <div class="control-panel">
@@ -73,48 +58,6 @@
           </div>
         </div>
 
-        <div class="control-group">
-          <h3>按类型配置</h3>
-          <div class="type-config">
-            <div class="type-config-item">
-              <div class="type-config-header">类型 1: 安全帽</div>
-              <label for="type1ColorSelect">颜色</label>
-              <div class="color-select-row">
-                <span class="color-swatch" id="type1ColorSwatch" aria-hidden="true"></span>
-                <select id="type1ColorSelect" data-target-color="type1Color">
-                  <option value="#ff4d4f" style="color: #ff4d4f;">■ 红色</option>
-                  <option value="#fa8c16" style="color: #fa8c16;">■ 橙色</option>
-                  <option value="#fadb14" style="color: #ad8b00;">■ 黄色</option>
-                  <option value="#52c41a" style="color: #52c41a;">■ 绿色</option>
-                  <option value="#13c2c2" style="color: #13c2c2;">■ 青色</option>
-                  <option value="#1677ff" style="color: #1677ff;">■ 蓝色</option>
-                  <option value="#722ed1" style="color: #722ed1;">■ 紫色</option>
-                  <option value="custom">■ 自定义</option>
-                </select>
-                <input type="color" id="type1Color" value="#ff4d4f" class="custom-color-input" aria-label="类型 1 颜色">
-              </div>
-            </div>
-
-            <div class="type-config-item">
-              <div class="type-config-header">类型 2: 人</div>
-              <label for="type2ColorSelect">颜色</label>
-              <div class="color-select-row">
-                <span class="color-swatch" id="type2ColorSwatch" aria-hidden="true"></span>
-                <select id="type2ColorSelect" data-target-color="type2Color">
-                  <option value="#ff4d4f" style="color: #ff4d4f;">■ 红色</option>
-                  <option value="#fa8c16" style="color: #fa8c16;">■ 橙色</option>
-                  <option value="#fadb14" style="color: #ad8b00;">■ 黄色</option>
-                  <option value="#52c41a" style="color: #52c41a;">■ 绿色</option>
-                  <option value="#13c2c2" style="color: #13c2c2;">■ 青色</option>
-                  <option value="#1677ff" style="color: #1677ff;">■ 蓝色</option>
-                  <option value="#722ed1" style="color: #722ed1;">■ 紫色</option>
-                  <option value="custom">■ 自定义</option>
-                </select>
-                <input type="color" id="type2Color" value="#52c41a" class="custom-color-input" aria-label="类型 2 颜色">
-              </div>
-            </div>
-          </div>
-        </div>
       </div>
     </div>
   </div>
@@ -137,15 +80,8 @@
       const showObjectId = document.getElementById('showObjectId');
       const showType = document.getElementById('showType');
       const showConfidence = document.getElementById('showConfidence');
-      const type1Color = document.getElementById('type1Color');
-      const type2Color = document.getElementById('type2Color');
-      const colorSelects = Array.from(document.querySelectorAll('[data-target-color]'));
-      const playerStatus = document.getElementById('playerStatus');
-      const mspFrameCountElement = document.getElementById('mspFrameCount');
-      const currentTimeElement = document.getElementById('currentTime');
 
       let player = null;
-      let mspFrameCount = 0;
       let currentUrl = '';
 
       const overlay = new msp.MSPOverlay({
@@ -156,18 +92,8 @@
 
       overlay.attachMedia(videoElement);
 
-      function updateStatus(status) {
-        playerStatus.textContent = status;
-      }
-
-      function updateFrameCount() {
-        mspFrameCountElement.textContent = String(mspFrameCount);
-      }
-
       function resetOverlayData() {
         overlay.clear();
-        mspFrameCount = 0;
-        updateFrameCount();
       }
 
       function updateLabelFields() {
@@ -176,66 +102,6 @@
         if (showType.checked) fields.push('type');
         if (showConfidence.checked) fields.push('confidence');
         overlay.configure({ labelFields: fields });
-      }
-
-      function updateTypeColors() {
-        overlay.configure({
-          typeConfigs: {
-            1: {
-              boxColor: type1Color.value
-            },
-            2: {
-              boxColor: type2Color.value
-            }
-          }
-        });
-      }
-
-      function updateColorSwatch(selectElement, colorValue) {
-        const swatch = document.getElementById(selectElement.id.replace('Select', 'Swatch'));
-
-        if (!swatch) {
-          return;
-        }
-
-        swatch.style.backgroundColor = colorValue;
-      }
-
-      function syncColorSelect(selectElement, colorValue) {
-        const normalizedColor = colorValue.toLowerCase();
-        const matchedOption = Array.from(selectElement.options).find(function(option) {
-          return option.value.toLowerCase() === normalizedColor;
-        });
-
-        selectElement.value = matchedOption ? matchedOption.value : 'custom';
-        updateColorSwatch(selectElement, colorValue);
-      }
-
-      function bindColorSelect(selectElement) {
-        const colorInput = document.getElementById(selectElement.dataset.targetColor);
-
-        syncColorSelect(selectElement, colorInput.value);
-
-        selectElement.addEventListener('change', function() {
-          if (selectElement.value === 'custom') {
-            colorInput.click();
-            return;
-          }
-
-          colorInput.value = selectElement.value;
-          syncColorSelect(selectElement, colorInput.value);
-          updateTypeColors();
-        });
-
-        colorInput.addEventListener('input', function() {
-          syncColorSelect(selectElement, colorInput.value);
-          updateTypeColors();
-        });
-
-        colorInput.addEventListener('change', function() {
-          syncColorSelect(selectElement, colorInput.value);
-          updateTypeColors();
-        });
       }
 
       function getFullscreenElement() {
@@ -294,31 +160,19 @@
 
         player.on(mpegts.Events.ERROR, function(errorType, errorDetail, errorInfo) {
           console.error('Player error:', errorType, errorDetail, errorInfo);
-          updateStatus('错误: ' + errorDetail);
-        });
-
-        player.on(mpegts.Events.LOADING_COMPLETE, function() {
-          updateStatus('加载完成');
         });
 
         player.on(mpegts.Events.MEDIA_INFO, function(mediaInfo) {
           console.log('Media info:', mediaInfo);
-          updateStatus('媒体信息已加载');
         });
 
         player.on(mpegts.Events.SEI_ARRIVED, function(data) {
           overlay.pushData(data);
-          mspFrameCount += 1;
-          updateFrameCount();
         });
 
         player.load();
         currentUrl = url;
       }
-
-      videoElement.addEventListener('timeupdate', function() {
-        currentTimeElement.textContent = videoElement.currentTime.toFixed(2) + 's';
-      });
 
       playBtn.onclick = function() {
         const url = streamUrlInput.value.trim();
@@ -342,12 +196,10 @@
           destroyPlayer();
           resetOverlayData();
           createPlayer(url);
-          updateStatus('已加载');
         }
 
         player.play();
         overlay.show();
-        updateStatus('播放中');
       };
 
       pauseBtn.onclick = function() {
@@ -356,7 +208,6 @@
         }
 
         player.pause();
-        updateStatus('已暂停');
       };
 
       stopBtn.onclick = function() {
@@ -368,7 +219,6 @@
         player.unload();
         resetOverlayData();
         currentUrl = '';
-        updateStatus('已停止');
       };
 
       fullscreenBtn.onclick = function() {
@@ -384,7 +234,6 @@
         destroyPlayer();
         resetOverlayData();
         currentUrl = '';
-        updateStatus('已销毁');
       };
 
       globalLineWidth.oninput = function(event) {
@@ -395,7 +244,6 @@
       showObjectId.onchange = updateLabelFields;
       showType.onchange = updateLabelFields;
       showConfidence.onchange = updateLabelFields;
-      colorSelects.forEach(bindColorSelect);
 
       document.addEventListener('fullscreenchange', function() {
         updateFullscreenButton();
@@ -412,11 +260,8 @@
         overlay.detachMedia();
       });
 
-      updateStatus('未初始化');
-      updateFrameCount();
       updateLabelFields();
       globalLineWidthValue.textContent = globalLineWidth.value;
-      updateTypeColors();
       updateFullscreenButton();
     })();
   </script>
