@@ -177,6 +177,19 @@ describe('MSPOverlay', () => {
     expect(renderer.resolveTextBoxPosition(3, 100, 50, 40, 20)).toEqual({ x: 60, y: 30 });
   });
 
+  it('should assign different default colors to different types', () => {
+    const renderer = (overlay as any).renderer;
+
+    const personColor = renderer.generateColor('person');
+    const vehicleColor = renderer.generateColor('vehicle');
+    const forkliftColor = renderer.generateColor('forklift');
+
+    expect(personColor).toBe('#ff4d4f');
+    expect(vehicleColor).toBe('#fa8c16');
+    expect(forkliftColor).toBe('#fadb14');
+    expect(renderer.generateColor('person')).toBe(personColor);
+  });
+
   it('should render multiline OSD text by splitting on newline', () => {
     overlay.attachMedia(videoElement);
 

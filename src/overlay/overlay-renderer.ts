@@ -67,7 +67,7 @@ export class OverlayRenderer {
     };
   } = {
     maxDetectionFrames: 100,
-    boxColor: '#30d6b0',
+    boxColor: null,
     lineWidth: 2,
     labelFields: ['object_id', 'type', 'confidence', 'bbox', 'angle'],
     typeConfigs: {},
@@ -286,7 +286,7 @@ export class OverlayRenderer {
     if (!this.ctx || !this.mediaElement) return;
 
     const typeConfig = this.config.typeConfigs[detection.type] || {};
-    const boxColor = typeConfig.boxColor || this.config.boxColor || this.generateColor(detection.type);
+    const boxColor = typeConfig.boxColor ?? this.config.boxColor ?? this.generateColor(detection.type);
     const lineWidth = typeConfig.lineWidth || this.config.lineWidth;
     const labelFields = typeConfig.labelFields || this.config.labelFields;
     const isNormalized = this.isNormalizedBbox(detection);
