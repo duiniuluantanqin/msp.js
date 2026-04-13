@@ -60,6 +60,7 @@ export class OverlayRenderer {
   private canvas: HTMLCanvasElement | null = null;
   private ctx: CanvasRenderingContext2D | null = null;
   private mediaElement: HTMLVideoElement | null = null;
+  private resizeObserver: ResizeObserver | null = null;
   private frames: MSPData[] = [];
   private visible = false;
   private animationFrameId: number | null = null;
@@ -132,6 +133,13 @@ export class OverlayRenderer {
 
     this.updateCanvasSize();
 
+    if (typeof ResizeObserver !== 'undefined') {
+      this.resizeObserver = new ResizeObserver(() => {
+        this.updateCanvasSize();
+      });
+      this.resizeObserver.observe(mediaElement);
+    }
+
     mediaElement.addEventListener('loadedmetadata', this.updateCanvasSize);
     mediaElement.addEventListener('pause', this.handlePause);
     mediaElement.addEventListener('play', this.handlePlay);
@@ -143,6 +151,11 @@ export class OverlayRenderer {
     if (this.animationFrameId !== null) {
       cancelAnimationFrame(this.animationFrameId);
       this.animationFrameId = null;
+    }
+
+    if (this.resizeObserver) {
+      this.resizeObserver.disconnect();
+      this.resizeObserver = null;
     }
 
     if (this.mediaElement) {
@@ -167,10 +180,20 @@ export class OverlayRenderer {
     if (!this.canvas || !this.mediaElement || !this.ctx) return;
 
     const rect = this.mediaElement.getBoundingClientRect();
+    const parent = this.canvas.parentElement;
+    const parentRect = parent?.getBoundingClientRect();
     const devicePixelRatio = window.devicePixelRatio || 1;
+    const offsetLeft = parentRect && parent
+      ? rect.left - parentRect.left - parent.clientLeft + parent.scrollLeft
+      : 0;
+    const offsetTop = parentRect && parent
+      ? rect.top - parentRect.top - parent.clientTop + parent.scrollTop
+      : 0;
 
     this.canvas.width = Math.max(1, Math.round(rect.width * devicePixelRatio));
     this.canvas.height = Math.max(1, Math.round(rect.height * devicePixelRatio));
+    this.canvas.style.left = `${offsetLeft}px`;
+    this.canvas.style.top = `${offsetTop}px`;
     this.canvas.style.width = `${rect.width}px`;
     this.canvas.style.height = `${rect.height}px`;
     this.ctx.setTransform(devicePixelRatio, 0, 0, devicePixelRatio, 0, 0);

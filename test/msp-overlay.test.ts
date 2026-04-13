@@ -5,6 +5,9 @@ describe('MSPOverlay', () => {
   let overlay: MSPOverlay;
   let videoElement: HTMLVideoElement;
   let getContextSpy: { mockRestore: () => void };
+  let originalResizeObserver: typeof ResizeObserver | undefined;
+  let resizeObserverCallback: ResizeObserverCallback | null;
+  let resizeObserverDisconnect: ReturnType<typeof vi.fn>;
   let mockContext: CanvasRenderingContext2D & {
     fillText: ReturnType<typeof vi.fn>;
     strokeText: ReturnType<typeof vi.fn>;
@@ -12,6 +15,26 @@ describe('MSPOverlay', () => {
   };
 
   beforeEach(() => {
+    resizeObserverCallback = null;
+    resizeObserverDisconnect = vi.fn();
+    originalResizeObserver = globalThis.ResizeObserver;
+
+    class MockResizeObserver {
+      constructor(callback: ResizeObserverCallback) {
+        resizeObserverCallback = callback;
+      }
+
+      observe = vi.fn();
+      unobserve = vi.fn();
+      disconnect = resizeObserverDisconnect;
+    }
+
+    Object.defineProperty(globalThis, 'ResizeObserver', {
+      configurable: true,
+      writable: true,
+      value: MockResizeObserver
+    });
+
     overlay = new MSPOverlay({
       boxColor: '#30d6b0',
       lineWidth: 2,
@@ -22,6 +45,66 @@ describe('MSPOverlay', () => {
     videoElement.width = 640;
     videoElement.height = 480;
 
+    const container = document.createElement('div');
+    container.appendChild(videoElement);
+
+    let parentRectLeft = 0;
+    let parentRectTop = 0;
+    let parentClientLeft = 0;
+    let parentClientTop = 0;
+    let parentScrollLeft = 0;
+    let parentScrollTop = 0;
+    vi.spyOn(container, 'getBoundingClientRect').mockImplementation(() => ({
+      x: parentRectLeft,
+      y: parentRectTop,
+      top: parentRectTop,
+      left: parentRectLeft,
+      right: parentRectLeft + 1000,
+      bottom: parentRectTop + 1000,
+      width: 1000,
+      height: 1000,
+      toJSON: () => ({})
+    }));
+
+    Object.defineProperty(container, 'clientLeft', {
+      configurable: true,
+      get: () => parentClientLeft
+    });
+
+    Object.defineProperty(container, 'clientTop', {
+      configurable: true,
+      get: () => parentClientTop
+    });
+
+    Object.defineProperty(container, 'scrollLeft', {
+      configurable: true,
+      get: () => parentScrollLeft
+    });
+
+    Object.defineProperty(container, 'scrollTop', {
+      configurable: true,
+      get: () => parentScrollTop
+    });
+
+    Object.defineProperty(videoElement, '__setParentRectPosition', {
+      configurable: true,
+      value: (
+        left: number,
+        top: number,
+        clientLeft: number = parentClientLeft,
+        clientTop: number = parentClientTop,
+        scrollLeft: number = parentScrollLeft,
+        scrollTop: number = parentScrollTop
+      ) => {
+        parentRectLeft = left;
+        parentRectTop = top;
+        parentClientLeft = clientLeft;
+        parentClientTop = clientTop;
+        parentScrollLeft = scrollLeft;
+        parentScrollTop = scrollTop;
+      }
+    });
+
     Object.defineProperty(videoElement, 'videoWidth', {
       writable: true,
       value: 640
@@ -29,6 +112,32 @@ describe('MSPOverlay', () => {
     Object.defineProperty(videoElement, 'videoHeight', {
       writable: true,
       value: 480
+    });
+
+    let rectWidth = 640;
+    let rectHeight = 480;
+    let rectLeft = 0;
+    let rectTop = 0;
+    vi.spyOn(videoElement, 'getBoundingClientRect').mockImplementation(() => ({
+      x: rectLeft,
+      y: rectTop,
+      top: rectTop,
+      left: rectLeft,
+      right: rectLeft + rectWidth,
+      bottom: rectTop + rectHeight,
+      width: rectWidth,
+      height: rectHeight,
+      toJSON: () => ({})
+    }));
+
+    Object.defineProperty(videoElement, '__setRectSize', {
+      configurable: true,
+      value: (width: number, height: number, left: number = rectLeft, top: number = rectTop) => {
+        rectWidth = width;
+        rectHeight = height;
+        rectLeft = left;
+        rectTop = top;
+      }
     });
 
     mockContext = {
@@ -57,13 +166,23 @@ describe('MSPOverlay', () => {
 
     getContextSpy = vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockReturnValue(mockContext);
 
-    document.body.appendChild(videoElement);
+    document.body.appendChild(container);
   });
 
   afterEach(() => {
     overlay.detachMedia();
     getContextSpy.mockRestore();
-    document.body.removeChild(videoElement);
+    document.body.innerHTML = '';
+
+    if (originalResizeObserver) {
+      Object.defineProperty(globalThis, 'ResizeObserver', {
+        configurable: true,
+        writable: true,
+        value: originalResizeObserver
+      });
+    } else {
+      Reflect.deleteProperty(globalThis, 'ResizeObserver');
+    }
   });
 
   it('should create overlay instance', () => {
@@ -74,9 +193,45 @@ describe('MSPOverlay', () => {
     expect(() => overlay.attachMedia(videoElement)).not.toThrow();
   });
 
+  it('should keep canvas size in sync with the video element', () => {
+    overlay.attachMedia(videoElement);
+
+    const canvas = document.body.querySelector('canvas');
+
+    expect(canvas).not.toBeNull();
+    expect(canvas?.style.width).toBe('640px');
+    expect(canvas?.style.height).toBe('480px');
+    expect(canvas?.style.left).toBe('0px');
+    expect(canvas?.style.top).toBe('0px');
+
+    (videoElement as HTMLVideoElement & {
+      __setRectSize: (width: number, height: number, left?: number, top?: number) => void;
+      __setParentRectPosition: (
+        left: number,
+        top: number,
+        clientLeft?: number,
+        clientTop?: number,
+        scrollLeft?: number,
+        scrollTop?: number
+      ) => void;
+    }).__setParentRectPosition(20, 30, 8, 12, 5, 7);
+    (videoElement as HTMLVideoElement & {
+      __setRectSize: (width: number, height: number, left?: number, top?: number) => void;
+    }).__setRectSize(800, 450, 60, 90);
+    resizeObserverCallback?.([], {} as ResizeObserver);
+
+    expect(canvas?.style.width).toBe('800px');
+    expect(canvas?.style.height).toBe('450px');
+    expect(canvas?.style.left).toBe('37px');
+    expect(canvas?.style.top).toBe('55px');
+    expect(canvas?.width).toBe(800);
+    expect(canvas?.height).toBe(450);
+  });
+
   it('should detach media element', () => {
     overlay.attachMedia(videoElement);
     expect(() => overlay.detachMedia()).not.toThrow();
+    expect(resizeObserverDisconnect).toHaveBeenCalled();
   });
 
   it('should push MSP data with normalized coordinates', () => {
