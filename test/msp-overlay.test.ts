@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { MSPOverlay } from '../src/overlay/msp-overlay';
+import { MSPOverlay } from '../src/msp-overlay/msp-overlay';
 
 describe('MSPOverlay', () => {
   let overlay: MSPOverlay;

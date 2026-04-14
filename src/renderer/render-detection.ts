@@ -1,5 +1,5 @@
 import type { MSPDetection } from '../parser/parser';
-import type { LabelField, TypeConfig, VideoRect } from './overlay-renderer';
+import type { LabelField, TypeConfig, VideoRect } from './renderer';
 
 type DetectionRendererConfig = {
   boxColor: string | null;

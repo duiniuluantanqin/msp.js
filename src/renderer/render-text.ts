@@ -1,5 +1,5 @@
 import type { MSPTextOverlay } from '../parser/parser';
-import type { TextConfig, VideoRect } from './overlay-renderer';
+import type { TextConfig, VideoRect } from './renderer';
 
 type ResolvedTextConfig = Required<Omit<TextConfig, 'backgroundColor' | 'strokeColor'>> & {
   backgroundColor: string | null;

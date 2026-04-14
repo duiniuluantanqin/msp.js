@@ -1,13 +1,13 @@
 import { MSPParser } from '../parser/parser';
-import { OverlayDebugInfo, OverlayRenderer, OverlayRendererConfig } from './overlay-renderer';
+import { DebugInfo, Renderer, RendererConfig } from '../renderer/renderer';
 
 export class MSPOverlay {
   private parser: MSPParser;
-  private renderer: OverlayRenderer;
+  private renderer: Renderer;
 
-  constructor(config?: OverlayRendererConfig) {
+  constructor(config?: RendererConfig) {
     this.parser = new MSPParser();
-    this.renderer = new OverlayRenderer(config);
+    this.renderer = new Renderer(config);
   }
 
   attachMedia(mediaElement: HTMLVideoElement): void {
@@ -25,7 +25,7 @@ export class MSPOverlay {
     }
   }
 
-  configure(config: OverlayRendererConfig): void {
+  configure(config: RendererConfig): void {
     this.renderer.configure(config);
   }
 
@@ -41,7 +41,7 @@ export class MSPOverlay {
     this.renderer.clear();
   }
 
-  getDebugInfo(): OverlayDebugInfo {
+  getDebugInfo(): DebugInfo {
     return this.renderer.getDebugInfo();
   }
 }

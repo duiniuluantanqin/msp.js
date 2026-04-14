@@ -1,6 +1,6 @@
 import type { MSPData, MSPDetection, MSPTextOverlay } from '../parser/parser';
-import { renderDetection as renderDetectionImpl } from './render-detection';
-import { renderTextOverlay as renderTextOverlayImpl, resolveTextBoxPosition as resolveTextBoxPositionImpl } from './render-text-overlay';
+import { renderDetection as renderDetectionImpl } from './render-detection.js';
+import { renderTextOverlay as renderTextOverlayImpl, resolveTextBoxPosition as resolveTextBoxPositionImpl } from './render-text.js';
 
 export type LabelField = 'object_id' | 'type' | 'confidence' | 'bbox' | 'angle';
 
@@ -20,7 +20,7 @@ export interface TextConfig {
   lineWidth?: number;
 }
 
-export interface OverlayRendererConfig {
+export interface RendererConfig {
   maxDetectionFrames?: number;
   boxColor?: string | null;
   lineWidth?: number;
@@ -29,7 +29,7 @@ export interface OverlayRendererConfig {
   textConfig?: TextConfig;
 }
 
-export interface OverlayDebugInfo {
+export interface DebugInfo {
   videoCurrentTimeMs: number | null;
   seiPtsMs: number | null;
   diffMs: number | null;
@@ -57,17 +57,17 @@ interface ActiveItem<T> {
   expiresAt: number;
 }
 
-export class OverlayRenderer {
+export class Renderer {
   private static readonly DEFAULT_TYPE_COLORS = [
     '#ff4d4f',
-    '#fa8c16',
-    '#fadb14',
     '#52c41a',
-    '#13c2c2',
+    '#fa8c16',
     '#1677ff',
+    '#fadb14',
     '#2f54eb',
-    '#722ed1',
+    '#13c2c2',
     '#eb2f96',
+    '#722ed1',
     '#a0d911'
   ];
 
@@ -86,7 +86,7 @@ export class OverlayRenderer {
   /** Active text overlays keyed by item_id, supporting item_duration persistence. */
   private activeTexts = new Map<number, ActiveItem<MSPTextOverlay>>();
 
-  private debugInfo: OverlayDebugInfo = {
+  private debugInfo: DebugInfo = {
     videoCurrentTimeMs: null,
     seiPtsMs: null,
     diffMs: null,
@@ -124,7 +124,7 @@ export class OverlayRenderer {
     }
   };
 
-  constructor(config?: OverlayRendererConfig) {
+  constructor(config?: RendererConfig) {
     if (config) {
       this.configure(config);
     }
@@ -232,7 +232,7 @@ export class OverlayRenderer {
     this.debugInfo.matchedFrameIndex = null;
   }
 
-  configure(config: OverlayRendererConfig): void {
+  configure(config: RendererConfig): void {
     if (config.maxDetectionFrames !== undefined) {
       this.config.maxDetectionFrames = config.maxDetectionFrames;
     }
@@ -290,7 +290,7 @@ export class OverlayRenderer {
     this.clearCanvas();
   }
 
-  getDebugInfo(): OverlayDebugInfo {
+  getDebugInfo(): DebugInfo {
     const currentTimeMs = this.getCurrentTimeMs();
 
     return {
@@ -565,7 +565,7 @@ export class OverlayRenderer {
       return assignedColor;
     }
 
-    const palette = OverlayRenderer.DEFAULT_TYPE_COLORS;
+    const palette = Renderer.DEFAULT_TYPE_COLORS;
     const color = palette[this.assignedTypeColors.size % palette.length];
     this.assignedTypeColors.set(type, color);
     return color;
