@@ -24,6 +24,7 @@
     "type": "git",
     "url": ""
   },
+  "homepage": "https://github.com/duiniuluantanqin/msp.js",
   "license": "MIT",
   "scripts": {
     "prebuild": "rimraf dist",
