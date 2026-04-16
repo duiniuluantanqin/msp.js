@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { MOSPOverlay } from '../src/mosp-overlay/mosp-overlay';
+import { resolveTextBoxPosition } from '../src/renderer/render-text';
 
 describe('MOSPOverlay', () => {
   let overlay: MOSPOverlay;
@@ -332,12 +333,10 @@ describe('MOSPOverlay', () => {
   });
 
   it('should resolve text anchors using the declared corner point', () => {
-    const renderer = (overlay as any).renderer;
-
-    expect(renderer.resolveTextBoxPosition(0, 100, 50, 40, 20)).toEqual({ x: 100, y: 50 });
-    expect(renderer.resolveTextBoxPosition(1, 100, 50, 40, 20)).toEqual({ x: 60, y: 50 });
-    expect(renderer.resolveTextBoxPosition(2, 100, 50, 40, 20)).toEqual({ x: 100, y: 30 });
-    expect(renderer.resolveTextBoxPosition(3, 100, 50, 40, 20)).toEqual({ x: 60, y: 30 });
+    expect(resolveTextBoxPosition(0, 100, 50, 40, 20)).toEqual({ x: 100, y: 50 });
+    expect(resolveTextBoxPosition(1, 100, 50, 40, 20)).toEqual({ x: 60, y: 50 });
+    expect(resolveTextBoxPosition(2, 100, 50, 40, 20)).toEqual({ x: 100, y: 30 });
+    expect(resolveTextBoxPosition(3, 100, 50, 40, 20)).toEqual({ x: 60, y: 30 });
   });
 
   it('should assign different default colors to different types', () => {
