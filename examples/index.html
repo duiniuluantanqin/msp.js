@@ -319,7 +319,7 @@
           return;
         }
 
-        if (!player || currentUrl !== url) {
+        if (player || currentUrl !== url) {
           destroyPlayer();
           resetOverlayData();
           createPlayer(url);
