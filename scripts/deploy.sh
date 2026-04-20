@@ -2,16 +2,37 @@
 set -euo pipefail
 
 # Usage:
-#   ./scripts/deploy.sh patch   # 1.0.0 -> 1.0.1
-#   ./scripts/deploy.sh minor   # 1.0.0 -> 1.1.0
-#   ./scripts/deploy.sh major   # 1.0.0 -> 2.0.0
-#   ./scripts/deploy.sh 1.2.3   # explicit version
+#   ./scripts/deploy.sh patch                  # 1.0.0 -> 1.0.1, push to origin
+#   ./scripts/deploy.sh minor upstream         # 1.0.0 -> 1.1.0, push to upstream
+#   ./scripts/deploy.sh major --remote mirror  # 1.0.0 -> 2.0.0, push to mirror
+#   ./scripts/deploy.sh 1.2.3                  # explicit version
 
 BUMP=${1:-patch}
+REMOTE=${2:-origin}
+
+if [[ "$REMOTE" == "--remote" ]]; then
+  REMOTE=${3:-}
+fi
+
+if [[ "$BUMP" == "--remote" ]]; then
+  REMOTE=${2:-}
+  BUMP=patch
+fi
+
+if [[ -z "$REMOTE" ]]; then
+  echo "❌  Missing remote name. Use ./scripts/deploy.sh [major|minor|patch|x.y.z] [remote]" >&2
+  exit 1
+fi
 
 # ── Sanity checks ────────────────────────────────────────────────────────────
 if ! command -v node &>/dev/null; then
   echo "❌  node is required" >&2; exit 1
+fi
+
+if ! git remote get-url "$REMOTE" &>/dev/null; then
+  echo "❌  Git remote '$REMOTE' does not exist" >&2
+  git remote >&2
+  exit 1
 fi
 
 if [[ -n "$(git status --porcelain)" ]]; then
@@ -46,6 +67,7 @@ else
 fi
 
 echo "📦  $CURRENT_VERSION  →  $NEW_VERSION"
+echo "🚀  Push remote: $REMOTE"
 read -r -p "Proceed? [y/N] " CONFIRM
 [[ "$CONFIRM" =~ ^[Yy]$ ]] || exit 0
 
@@ -63,7 +85,7 @@ TAG="v${NEW_VERSION}"
 git add package.json
 git commit -m "chore: release ${TAG}"
 git tag "$TAG"
-git push origin "$CURRENT_BRANCH"
-git push origin "$TAG"
+git push "$REMOTE" "$CURRENT_BRANCH"
+git push "$REMOTE" "$TAG"
 
 echo "✅  Released ${TAG} — GitHub Actions will publish to npm."
