@@ -139,6 +139,8 @@
       let currentUrl = '';
       let debugPanelRafId = null;
       let debugPanelVisible = true;
+      const LIVE_EDGE_MIN_REMAIN = 0.5;
+      const LIVE_EDGE_MAX_LATENCY = 1.5;
 
       const overlay = new mosp.MOSPOverlay({
         maxDetectionFrames: 400,
@@ -277,12 +279,13 @@
       function createPlayer(url) {
         player = mpegts.createPlayer({
           type: 'mse',
+          isLive: true,
+          url
+        }, {
           enableWorker: true,
           lazyLoadMaxDuration: 3 * 60,
           seekType: 'range',
-          liveBufferLatencyChasing: true,
-          isLive: true,
-          url
+          liveBufferLatencyChasing: true
         });
 
         player.attachMediaElement(videoElement);
