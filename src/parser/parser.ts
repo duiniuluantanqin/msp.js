@@ -185,9 +185,6 @@ export class MOSPParser {
     const angleQ = readUint16BE(payload, offset + 11);
     const distance = readUint32BE(payload, offset + 13);
     const style = payload[offset + 17];
-    if (style == 1) {
-      console.warn('BorderSolid style is deprecated, please use CornerOnly with color to achieve the same effect');
-    }
     const color = readUint32BE(payload, offset + 18);
     const typeLength = payload[offset + 22];
     

@@ -9,12 +9,68 @@ body {
   background: #f5f5f5;
   color: #222;
   min-height: 100vh;
-  padding: 20px;
+  padding: 12px;
 }
 
 .container {
-  max-width: 1400px;
+  max-width: 1480px;
   margin: 0 auto;
+}
+
+.log-panel {
+  margin-top: 12px;
+  background: #fff;
+  border: 1px solid #d9d9d9;
+  border-radius: 8px;
+  padding: 12px 14px;
+}
+
+.log-panel.debug-disabled {
+  opacity: 0.7;
+}
+
+.log-output {
+  min-height: 160px;
+  max-height: 260px;
+  overflow-y: auto;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: #111827;
+  color: #e5e7eb;
+  font-family: Consolas, 'Courier New', monospace;
+  font-size: 12px;
+  line-height: 1.35;
+}
+
+.log-empty {
+  color: #9ca3af;
+}
+
+.log-entry {
+  padding: 4px 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.log-entry:last-child {
+  border-bottom: none;
+}
+
+.log-entry-info {
+  color: #93c5fd;
+}
+
+.log-entry-warn {
+  color: #fcd34d;
+}
+
+.log-entry-error {
+  color: #fca5a5;
+}
+
+.log-entry-debug {
+  color: #c4b5fd;
 }
 
 h1 {
@@ -27,9 +83,15 @@ h1 {
 
 .main-content {
   display: grid;
-  grid-template-columns: 1fr 340px;
-  gap: 20px;
+  grid-template-columns: minmax(0, 1fr) 300px;
+  gap: 12px;
   align-items: start;
+}
+
+.side-panels {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
 }
 
 .video-section,
@@ -37,10 +99,9 @@ h1 {
   background: #fff;
   border: 1px solid #d9d9d9;
   border-radius: 8px;
-  padding: 20px;
+  padding: 12px;
 }
 
-.status-bar,
 .type-config {
   background: #fafafa;
   border: 1px solid #e3e3e3;
@@ -50,12 +111,12 @@ h1 {
 #videoContainer {
   position: relative;
   width: 100%;
-  aspect-ratio: 16 / 9;
+  aspect-ratio: 16 / 8;
   background: #000;
   border: 1px solid #d9d9d9;
   border-radius: 6px;
   overflow: hidden;
-  margin-bottom: 20px;
+  margin-bottom: 12px;
 }
 
 #videoContainer:fullscreen,
@@ -74,22 +135,56 @@ h1 {
   object-fit: contain;
 }
 
+#videoElement.hidden,
+#h265PlayerHost.hidden,
+#overlayProxy.hidden {
+  display: none;
+}
+
+#h265PlayerHost {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+}
+
+#h265PlayerHost canvas,
+#h265PlayerHost video {
+  width: 100% !important;
+  height: 100% !important;
+  display: block;
+}
+
+#overlayProxy {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0;
+}
+
 .player-controls {
   display: flex;
-  gap: 10px;
+  gap: 8px;
   flex-wrap: wrap;
   align-items: center;
 }
 
+.player-controls button,
+.player-controls select,
+.player-controls input[type="text"] {
+  flex: 0 0 auto;
+}
+
 .debug-panel {
   position: absolute;
-  top: 12%;
-  left: 20px;
+  top: 10px;
+  left: 10px;
   z-index: 10;
-  width: min(300px, calc(100% - 40px));
-  max-height: 72%;
+  width: min(260px, calc(100% - 20px));
+  max-height: calc(100% - 20px);
   overflow: auto;
-  padding: 12px 14px;
+  padding: 8px 10px;
   border: 1px solid rgba(255, 255, 255, 0.2);
   border-radius: 8px;
   background: rgba(0, 0, 0, 0.55);
@@ -99,17 +194,21 @@ h1 {
   display: none;
 }
 
+.hidden {
+  display: none !important;
+}
+
 .debug-panel h3 {
-  margin-bottom: 10px;
+  margin-bottom: 6px;
   color: #ffffff;
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 600;
 }
 
 .debug-grid {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 4px;
 }
 
 .debug-item {
@@ -126,7 +225,7 @@ h1 {
   display: inline;
   flex: 0 0 auto;
   color: rgba(255, 255, 255, 0.75);
-  font-size: 12px;
+  font-size: 11px;
 }
 
 .debug-label::after {
@@ -138,33 +237,50 @@ h1 {
   display: inline;
   flex: 1 1 auto;
   color: #ffffff;
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 600;
   font-variant-numeric: tabular-nums;
   text-align: right;
 }
 
 #streamUrl {
-  flex: 1 1 280px;
+  flex: 1 1 280px !important;
   min-width: 220px;
 }
 
+#playerType {
+  width: 148px;
+  min-width: 148px;
+  padding-right: 36px;
+  background-image:
+    linear-gradient(45deg, transparent 50%, #666 50%),
+    linear-gradient(135deg, #666 50%, transparent 50%);
+  background-position:
+    calc(100% - 16px) calc(50% - 3px),
+    calc(100% - 10px) calc(50% - 3px);
+  background-size:
+    6px 6px,
+    6px 6px;
+  background-repeat: no-repeat;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
 .control-panel {
-  max-height: calc(100vh - 80px);
-  overflow-y: auto;
+  max-height: none;
+  overflow-y: visible;
 }
 
 .control-panel h2 {
   color: #222;
-  margin-bottom: 20px;
-  font-size: 1.2em;
-  padding-bottom: 10px;
+  margin-bottom: 10px;
+  font-size: 1em;
+  padding-bottom: 6px;
   border-bottom: 1px solid #d9d9d9;
 }
 
 .control-group {
-  margin-bottom: 20px;
-  padding-bottom: 20px;
+  margin-bottom: 10px;
+  padding-bottom: 10px;
   border-bottom: 1px solid #e5e5e5;
 }
 
@@ -176,19 +292,19 @@ h1 {
 
 .control-group h3 {
   color: #333;
-  margin-bottom: 12px;
-  font-size: 1em;
+  margin-bottom: 8px;
+  font-size: 0.92em;
   font-weight: 600;
 }
 
 button {
-  padding: 10px 16px;
+  padding: 7px 12px;
   border: 1px solid #bfbfbf;
   border-radius: 6px;
   background: #f3f3f3;
   color: #222;
-  font-size: 14px;
-  cursor: pointer;
+  font-size: 13px;
+  line-height: 1.2;
 }
 
 button:hover {
@@ -202,9 +318,9 @@ button:active {
 label {
   display: block;
   color: #444;
-  margin-bottom: 8px;
+  margin-bottom: 4px;
   font-weight: 500;
-  font-size: 14px;
+  font-size: 13px;
 }
 
 input[type="color"],
@@ -215,18 +331,17 @@ select {
 }
 
 input[type="color"] {
-  height: 40px;
+  height: 34px;
   border: 1px solid #cfcfcf;
   border-radius: 6px;
   background: #fff;
-  cursor: pointer;
 }
 
 input[type="text"] {
-  padding: 10px 12px;
+  padding: 7px 10px;
   border: 1px solid #cfcfcf;
   border-radius: 6px;
-  font-size: 14px;
+  font-size: 13px;
   background: #fff;
   color: #222;
 }
@@ -237,10 +352,10 @@ input[type="text"]:focus {
 }
 
 select {
-  padding: 10px 12px;
+  padding: 7px 10px;
   border: 1px solid #cfcfcf;
   border-radius: 6px;
-  font-size: 14px;
+  font-size: 13px;
   background: #fff;
   color: #222;
   appearance: none;
@@ -248,7 +363,8 @@ select {
 
 select:focus {
   outline: none;
-  border-color: #999;
+  border-color: #4f83bd;
+  box-shadow: 0 0 0 3px rgba(79, 131, 189, 0.18);
 }
 
 input[type="range"] {
@@ -258,37 +374,37 @@ input[type="range"] {
 .checkbox-group {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 4px;
 }
 
 .checkbox-group label {
   display: flex;
   align-items: center;
   margin-bottom: 0;
-  cursor: pointer;
 }
 
 .checkbox-group input[type="checkbox"] {
-  margin-right: 8px;
-  width: 16px;
-  height: 16px;
+  margin-right: 6px;
+  width: 14px;
+  height: 14px;
 }
 
 .value-display {
   display: inline-block;
   min-width: 32px;
-  padding: 4px 8px;
+  padding: 2px 6px;
   margin-left: 8px;
   border: 1px solid #d9d9d9;
   border-radius: 4px;
   background: #fafafa;
   color: #333;
   text-align: center;
+  font-size: 12px;
 }
 
 .slider-control {
-  margin-top: 16px;
-  padding: 14px;
+  margin-top: 10px;
+  padding: 8px 10px;
   border: 1px solid #e5e5e5;
   border-radius: 8px;
   background: #fafafa;
@@ -298,28 +414,11 @@ input[type="range"] {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
-  margin-bottom: 10px;
-}
-
-.slider-control-header label {
-  margin-bottom: 0;
-}
-
-.status-bar {
-  padding: 12px;
-  margin-top: 15px;
-  font-size: 13px;
-  color: #555;
-}
-
-.status-item {
-  display: flex;
-  justify-content: space-between;
+  gap: 8px;
   margin-bottom: 6px;
 }
 
-.status-item:last-child {
+.slider-control-header label {
   margin-bottom: 0;
 }
 
@@ -376,14 +475,14 @@ input[type="range"] {
     grid-template-columns: 1fr;
   }
 
-  .control-panel {
-    max-height: none;
+  .side-panels {
+    gap: 10px;
   }
 
   .debug-panel {
-    top: 16px;
-    left: 16px;
-    width: min(280px, calc(100% - 32px));
-    max-height: calc(100% - 32px);
+    top: 8px;
+    left: 8px;
+    width: min(240px, calc(100% - 16px));
+    max-height: calc(100% - 16px);
   }
 }

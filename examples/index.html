@@ -12,6 +12,8 @@
       <div class="video-section">
         <div id="videoContainer">
           <video id="videoElement"></video>
+          <div id="h265PlayerHost" class="hidden"></div>
+          <div id="overlayProxy" class="hidden" aria-hidden="true"></div>
 
           <div class="debug-panel" id="debugPanel">
             <h3>调试面板</h3>
@@ -41,7 +43,7 @@
                 <span class="debug-value" id="lastBufferedTimestamp">--</span>
               </div>
               <div class="debug-item">
-                <span class="debug-label">bbox个数</span>
+                <span class="debug-label">BBox 个数</span>
                 <span class="debug-value" id="bboxCount">--</span>
               </div>
             </div>
@@ -52,117 +54,104 @@
           <button id="playPauseBtn">播放</button>
           <button id="stopBtn">停止</button>
           <button id="fullscreenBtn">全屏</button>
-          <button id="toggleDebugBtn">关闭调试面板</button>
+          <button id="clearLogsBtn" type="button">清空日志</button>
+          <select id="playerType" aria-label="选择播放器" title="选择播放器">
+            <option value="mpegts">mpegts.js</option>
+            <option value="h265web_mse_hevc">h265web.js(mse)</option>
+            <option value="h265web_webcodec_hevc">h265web.js(webcodec)</option>
+            <option value="h265web_wasm_hevc">h265web.js(wasm)</option>
+          </select>
           <input
             type="text"
             id="streamUrl"
-            placeholder="输入 MPEG-TS 流地址"
-            value="http://192.168.88.91:7777/live/livestream1.live.ts"
+            placeholder="输入直播流地址"
+            value="http://192.168.88.91:7777/live/livestream.live.ts"
           >
         </div>
       </div>
 
-      <div class="control-panel">
-        <h2>渲染配置</h2>
+      <div class="side-panels">
+        <div class="control-panel">
+          <h2>渲染配置</h2>
 
-        <div class="control-group">
-          <h3>标签字段</h3>
-          <div class="checkbox-group">
-            <label>
-              <input type="checkbox" id="showObjectId" checked>
-              显示对象 ID
-            </label>
-            <label>
-              <input type="checkbox" id="showType" checked>
-              显示类型
-            </label>
-            <label>
-              <input type="checkbox" id="showConfidence" checked>
-              显示置信度
-            </label>
-            <label>
-              <input type="checkbox" id="showItemDuration">
-              显示 Item Duration
-            </label>
-          </div>
-
-          <div class="slider-control">
-            <div class="slider-control-header">
-              <label for="globalLineWidth">线宽</label>
-              <span class="value-display" id="globalLineWidthValue">2</span>
+          <div class="control-group">
+            <h3>标签字段</h3>
+            <div class="checkbox-group">
+              <label>
+                <input type="checkbox" id="showObjectId" checked>
+                显示对象 ID
+              </label>
+              <label>
+                <input type="checkbox" id="showType" checked>
+                显示类型
+              </label>
+              <label>
+                <input type="checkbox" id="showConfidence" checked>
+                显示置信度
+              </label>
+              <label>
+                <input type="checkbox" id="showItemDuration">
+                显示 Item Duration
+              </label>
             </div>
-            <input type="range" id="globalLineWidth" min="1" max="10" value="2">
-          </div>
 
-          <div class="slider-control">
-            <div class="slider-control-header">
-              <label for="maxDetectionFrames">最大检测帧缓存</label>
-              <span class="value-display" id="maxDetectionFramesValue">400</span>
+            <div class="slider-control">
+              <div class="slider-control-header">
+                <label for="globalLineWidth">线宽</label>
+                <span class="value-display" id="globalLineWidthValue">2</span>
+              </div>
+              <input type="range" id="globalLineWidth" min="1" max="10" value="2">
             </div>
-            <input type="range" id="maxDetectionFrames" min="100" max="1000" step="10" value="400">
+
+            <div class="slider-control">
+              <div class="slider-control-header">
+                <label for="maxDetectionFrames">最大检测帧缓存</label>
+                <span class="value-display" id="maxDetectionFramesValue">400</span>
+              </div>
+              <input type="range" id="maxDetectionFrames" min="100" max="1000" step="10" value="400">
+            </div>
+          </div>
+        </div>
+
+        <div class="control-panel">
+          <h2>播放配置</h2>
+
+          <div class="control-group">
+            <div class="checkbox-group">
+              <label for="enableDebug">
+                <input type="checkbox" id="enableDebug" checked>
+                开启调试
+              </label>
+              <label for="mpegtsEnableWorker">
+                <input type="checkbox" id="mpegtsEnableWorker">
+                mpegts.js enableWorker
+              </label>
+              <label for="mpegtsIsLive">
+                <input type="checkbox" id="mpegtsIsLive">
+                mpegts.js isLive
+              </label>
+              <label for="mpegtsLiveBufferLatencyChasing">
+                <input type="checkbox" id="mpegtsLiveBufferLatencyChasing" checked>
+                mpegts.js liveBufferLatencyChasing
+              </label>
+            </div>
           </div>
         </div>
       </div>
     </div>
+
+    <div class="log-panel" id="logPanel">
+      <div class="log-output" id="logOutput">
+        <div class="log-empty" id="logEmptyState">等待日志输出</div>
+      </div>
+    </div>
   </div>
 
-  <script src="mpegts.js"></script>
   <script src="../dist/mosp.js"></script>
-
+  <script src="./mpegts-demo.js"></script>
+  <script src="./h265web-demo.js"></script>
   <script>
     (function() {
-      const videoElement = document.getElementById('videoElement');
-      const streamUrlInput = document.getElementById('streamUrl');
-      const playPauseBtn = document.getElementById('playPauseBtn');
-      const stopBtn = document.getElementById('stopBtn');
-      const fullscreenBtn = document.getElementById('fullscreenBtn');
-      const toggleDebugBtn = document.getElementById('toggleDebugBtn');
-      const videoContainer = document.getElementById('videoContainer');
-      const debugPanel = document.getElementById('debugPanel');
-      const globalLineWidth = document.getElementById('globalLineWidth');
-      const globalLineWidthValue = document.getElementById('globalLineWidthValue');
-      const maxDetectionFrames = document.getElementById('maxDetectionFrames');
-      const maxDetectionFramesValue = document.getElementById('maxDetectionFramesValue');
-      const showObjectId = document.getElementById('showObjectId');
-      const showType = document.getElementById('showType');
-      const showConfidence = document.getElementById('showConfidence');
-      const showItemDuration = document.getElementById('showItemDuration');
-      const videoTimestamp = document.getElementById('videoTimestamp');
-      const seiTimestamp = document.getElementById('seiTimestamp');
-      const timestampDiff = document.getElementById('timestampDiff');
-      const bufferedFrames = document.getElementById('bufferedFrames');
-      const firstBufferedTimestamp = document.getElementById('firstBufferedTimestamp');
-      const lastBufferedTimestamp = document.getElementById('lastBufferedTimestamp');
-      const bboxCount = document.getElementById('bboxCount');
-
-      let player = null;
-      let currentUrl = '';
-      let debugPanelRafId = null;
-      let debugPanelVisible = true;
-      const LIVE_EDGE_MIN_REMAIN = 0.5;
-      const LIVE_EDGE_MAX_LATENCY = 1.5;
-
-      const overlay = new mosp.MOSPOverlay({
-        maxDetectionFrames: 400,
-        lineWidth: 2,
-        labelFields: ['object_id', 'type', 'confidence']
-      });
-
-      overlay.attachMedia(videoElement);
-
-      function resetOverlayData() {
-        overlay.clear();
-      }
-
-      function updateLabelFields() {
-        const fields = [];
-        if (showObjectId.checked) fields.push('object_id');
-        if (showType.checked) fields.push('type');
-        if (showConfidence.checked) fields.push('confidence');
-        if (showItemDuration.checked) fields.push('item_duration');
-        overlay.configure({ labelFields: fields });
-      }
-
       function formatTimestamp(ms) {
         if (typeof ms !== 'number' || !Number.isFinite(ms)) {
           return '--';
@@ -174,10 +163,10 @@
         const seconds = Math.floor((totalMs % 60000) / 1000);
         const millis = totalMs % 1000;
 
-        const pad2 = (v) => v.toString().padStart(2, '0');
-        const pad3 = (v) => v.toString().padStart(3, '0');
-
-        return `${pad2(hours)}:${pad2(minutes)}:${pad2(seconds)}.${pad3(millis)}`;
+        return String(hours).padStart(2, '0') + ':' +
+          String(minutes).padStart(2, '0') + ':' +
+          String(seconds).padStart(2, '0') + '.' +
+          String(millis).padStart(3, '0');
       }
 
       function formatDiff(ms) {
@@ -188,27 +177,190 @@
         return (ms >= 0 ? '+' : '') + ms.toFixed(1) + ' ms';
       }
 
+      const elements = {
+        videoElement: document.getElementById('videoElement'),
+        h265PlayerHost: document.getElementById('h265PlayerHost'),
+        overlayProxy: document.getElementById('overlayProxy'),
+        playPauseBtn: document.getElementById('playPauseBtn'),
+        stopBtn: document.getElementById('stopBtn'),
+        fullscreenBtn: document.getElementById('fullscreenBtn'),
+        playerType: document.getElementById('playerType'),
+        streamUrl: document.getElementById('streamUrl'),
+        enableDebug: document.getElementById('enableDebug'),
+        mpegtsEnableWorker: document.getElementById('mpegtsEnableWorker'),
+        mpegtsIsLive: document.getElementById('mpegtsIsLive'),
+        mpegtsLiveBufferLatencyChasing: document.getElementById('mpegtsLiveBufferLatencyChasing'),
+        videoContainer: document.getElementById('videoContainer'),
+        debugPanel: document.getElementById('debugPanel'),
+        logPanel: document.getElementById('logPanel'),
+        logOutput: document.getElementById('logOutput'),
+        logEmptyState: document.getElementById('logEmptyState'),
+        clearLogsBtn: document.getElementById('clearLogsBtn'),
+        globalLineWidth: document.getElementById('globalLineWidth'),
+        globalLineWidthValue: document.getElementById('globalLineWidthValue'),
+        maxDetectionFrames: document.getElementById('maxDetectionFrames'),
+        maxDetectionFramesValue: document.getElementById('maxDetectionFramesValue'),
+        showObjectId: document.getElementById('showObjectId'),
+        showType: document.getElementById('showType'),
+        showConfidence: document.getElementById('showConfidence'),
+        showItemDuration: document.getElementById('showItemDuration'),
+        videoTimestamp: document.getElementById('videoTimestamp'),
+        seiTimestamp: document.getElementById('seiTimestamp'),
+        timestampDiff: document.getElementById('timestampDiff'),
+        bufferedFrames: document.getElementById('bufferedFrames'),
+        firstBufferedTimestamp: document.getElementById('firstBufferedTimestamp'),
+        lastBufferedTimestamp: document.getElementById('lastBufferedTimestamp'),
+        bboxCount: document.getElementById('bboxCount')
+      };
+
+      const STREAM_URL_STORAGE_KEY = 'mosp.demo.streamUrl';
+
+      const overlay = new mosp.MOSPOverlay({
+        maxDetectionFrames: 400,
+        lineWidth: 2,
+        labelFields: ['object_id', 'type', 'confidence']
+      });
+
+      function isH265webType(type) {
+        return type === 'h265web_mse_hevc' ||
+          type === 'h265web_webcodec_hevc' ||
+          type === 'h265web_wasm_hevc';
+      }
+
+      const playerFactories = {
+        mpegts: window.createMpegtsDemoPlayer,
+        h265web_mse_hevc: window.createH265webDemoPlayer,
+        h265web_webcodec_hevc: window.createH265webDemoPlayer,
+        h265web_wasm_hevc: window.createH265webDemoPlayer
+      };
+
+      let currentPlayerType = elements.playerType.value || 'mpegts';
+      let currentController = null;
+      let debugPanelRafId = null;
+      let debugEnabled = elements.enableDebug.checked;
+      let logEntryCount = 0;
+
+      const MAX_LOG_ENTRIES = 200;
+      const consoleMethods = ['log', 'info', 'warn', 'error', 'debug'];
+      const originalConsole = consoleMethods.reduce(function(methods, method) {
+        methods[method] = console[method].bind(console);
+        return methods;
+      }, {});
+
+      function formatLogArg(value) {
+        if (value instanceof Error) {
+          return value.stack || value.message || String(value);
+        }
+
+        if (typeof value === 'string') {
+          return value;
+        }
+
+        try {
+          return JSON.stringify(value, null, 2);
+        } catch (error) {
+          return String(value);
+        }
+      }
+
+      function updateLogEmptyState() {
+        if (!elements.logEmptyState) {
+          return;
+        }
+
+        if (logEntryCount > 0) {
+          elements.logEmptyState.classList.add('hidden');
+          return;
+        }
+
+        elements.logEmptyState.classList.remove('hidden');
+        elements.logEmptyState.textContent = debugEnabled ? '等待日志输出' : '开启调试后显示 console 日志';
+      }
+
+      function appendLogEntry(level, args) {
+        if (!debugEnabled) {
+          return;
+        }
+
+        var entry = document.createElement('div');
+        var timestamp = new Date().toLocaleTimeString('zh-CN', { hour12: false });
+        entry.className = 'log-entry log-entry-' + level;
+        entry.textContent = '[' + timestamp + '] ' + level.toUpperCase() + ' ' + args.map(formatLogArg).join(' ');
+        elements.logOutput.appendChild(entry);
+        logEntryCount += 1;
+
+        while (logEntryCount > MAX_LOG_ENTRIES) {
+          var oldestEntry = elements.logOutput.querySelector('.log-entry');
+          if (!oldestEntry) {
+            break;
+          }
+          oldestEntry.remove();
+          logEntryCount -= 1;
+        }
+
+        updateLogEmptyState();
+        elements.logOutput.scrollTop = elements.logOutput.scrollHeight;
+      }
+
+      function clearLogs() {
+        Array.from(elements.logOutput.querySelectorAll('.log-entry')).forEach(function(entry) {
+          entry.remove();
+        });
+        logEntryCount = 0;
+        updateLogEmptyState();
+      }
+
+      consoleMethods.forEach(function(method) {
+        console[method] = function() {
+          var args = Array.prototype.slice.call(arguments);
+          originalConsole[method].apply(console, args);
+          appendLogEntry(method, args);
+        };
+      });
+
+      function setOverlayMedia(mediaElement) {
+        overlay.detachMedia();
+        overlay.attachMedia(mediaElement);
+      }
+
+      function resetOverlayData() {
+        overlay.clear();
+      }
+
+      function updateLabelFields() {
+        const fields = [];
+        if (elements.showObjectId.checked) fields.push('object_id');
+        if (elements.showType.checked) fields.push('type');
+        if (elements.showConfidence.checked) fields.push('confidence');
+        if (elements.showItemDuration.checked) fields.push('item_duration');
+        overlay.configure({ labelFields: fields });
+      }
+
       function renderDebugPanel() {
+        if (!debugEnabled) {
+          debugPanelRafId = null;
+          return;
+        }
+
         const debugInfo = overlay.getDebugInfo();
         const matchedFramesText = debugInfo.matchedFrameIndex === null
-          ? `--/${debugInfo.bufferedFrames}`
-          : `${debugInfo.matchedFrameIndex}/${debugInfo.bufferedFrames}`;
+          ? '--/' + debugInfo.bufferedFrames
+          : debugInfo.matchedFrameIndex + '/' + debugInfo.bufferedFrames;
 
-        videoTimestamp.textContent = formatTimestamp(debugInfo.videoCurrentTimeMs);
-        seiTimestamp.textContent = formatTimestamp(debugInfo.seiPtsMs);
-        timestampDiff.textContent = formatDiff(debugInfo.diffMs);
-        bufferedFrames.textContent = matchedFramesText;
-        firstBufferedTimestamp.textContent = formatTimestamp(debugInfo.firstBufferedPtsMs);
-        lastBufferedTimestamp.textContent = formatTimestamp(debugInfo.lastBufferedPtsMs);
-        bboxCount.textContent = debugInfo.bboxCount.toString();
+        elements.videoTimestamp.textContent = formatTimestamp(debugInfo.videoCurrentTimeMs);
+        elements.seiTimestamp.textContent = formatTimestamp(debugInfo.seiPtsMs);
+        elements.timestampDiff.textContent = formatDiff(debugInfo.diffMs);
+        elements.bufferedFrames.textContent = matchedFramesText;
+        elements.firstBufferedTimestamp.textContent = formatTimestamp(debugInfo.firstBufferedPtsMs);
+        elements.lastBufferedTimestamp.textContent = formatTimestamp(debugInfo.lastBufferedPtsMs);
+        elements.bboxCount.textContent = String(debugInfo.bboxCount);
         debugPanelRafId = requestAnimationFrame(renderDebugPanel);
       }
 
       function startDebugPanel() {
-        if (debugPanelRafId !== null) {
+        if (!debugEnabled || debugPanelRafId !== null) {
           return;
         }
-
         renderDebugPanel();
       }
 
@@ -216,42 +368,72 @@
         if (debugPanelRafId === null) {
           return;
         }
-
         cancelAnimationFrame(debugPanelRafId);
         debugPanelRafId = null;
       }
 
-      function updateDebugToggleButton() {
-        toggleDebugBtn.textContent = debugPanelVisible ? '关闭调试面板' : '打开调试面板';
+      function setDebugEnabled(enabled) {
+        debugEnabled = enabled;
+        elements.logPanel.classList.toggle('debug-disabled', !enabled);
+        elements.debugPanel.classList.toggle('hidden', !enabled);
+
+        if (enabled) {
+          startDebugPanel();
+        } else {
+          stopDebugPanel();
+        }
+
+        updateLogEmptyState();
       }
 
-      function setDebugPanelVisible(visible) {
-        debugPanelVisible = visible;
-        debugPanel.classList.toggle('hidden', !visible);
-        updateDebugToggleButton();
+      function updatePlayPauseLabel(isPaused) {
+        elements.playPauseBtn.textContent = isPaused ? '播放' : '暂停';
+      }
+
+      function restoreStreamUrl() {
+        try {
+          const savedUrl = window.localStorage.getItem(STREAM_URL_STORAGE_KEY);
+          if (savedUrl) {
+            elements.streamUrl.value = savedUrl;
+          }
+        } catch (error) {
+          console.warn('读取已保存的流地址失败:', error);
+        }
+      }
+
+      function persistStreamUrl() {
+        const url = elements.streamUrl.value.trim();
+
+        try {
+          if (url) {
+            window.localStorage.setItem(STREAM_URL_STORAGE_KEY, url);
+          } else {
+            window.localStorage.removeItem(STREAM_URL_STORAGE_KEY);
+          }
+        } catch (error) {
+          console.warn('保存流地址失败:', error);
+        }
       }
 
       function getFullscreenElement() {
         return document.fullscreenElement || document.webkitFullscreenElement || null;
       }
 
-      function isVideoContainerFullscreen() {
-        return getFullscreenElement() === videoContainer;
+      function isContainerFullscreen() {
+        return getFullscreenElement() === elements.videoContainer;
       }
 
       function updateFullscreenButton() {
-        fullscreenBtn.textContent = isVideoContainerFullscreen() ? '退出全屏' : '全屏';
+        elements.fullscreenBtn.textContent = isContainerFullscreen() ? '退出全屏' : '全屏';
       }
 
       function requestContainerFullscreen() {
-        if (videoContainer.requestFullscreen) {
-          return videoContainer.requestFullscreen();
+        if (elements.videoContainer.requestFullscreen) {
+          return elements.videoContainer.requestFullscreen();
         }
-
-        if (videoContainer.webkitRequestFullscreen) {
-          return videoContainer.webkitRequestFullscreen();
+        if (elements.videoContainer.webkitRequestFullscreen) {
+          return elements.videoContainer.webkitRequestFullscreen();
         }
-
         return Promise.reject(new Error('Fullscreen API is not supported'));
       }
 
@@ -259,138 +441,160 @@
         if (document.exitFullscreen) {
           return document.exitFullscreen();
         }
-
         if (document.webkitExitFullscreen) {
           return document.webkitExitFullscreen();
         }
-
         return Promise.reject(new Error('Fullscreen exit is not supported'));
       }
 
-      function destroyPlayer() {
-        if (!player) {
-          return;
-        }
-
-        player.destroy();
-        player = null;
+      function togglePlayerView(type) {
+        const useH265 = isH265webType(type);
+        elements.videoElement.classList.toggle('hidden', useH265);
+        elements.h265PlayerHost.classList.toggle('hidden', !useH265);
+        elements.overlayProxy.classList.toggle('hidden', !useH265);
       }
 
-      function createPlayer(url) {
-        player = mpegts.createPlayer({
-          type: 'mse',
-          isLive: true,
-          url
-        }, {
-          enableWorker: true,
-          lazyLoadMaxDuration: 3 * 60,
-          seekType: 'range',
-          liveBufferLatencyChasing: true
-        });
+      function buildSharedApi() {
+        return {
+          elements,
+          playerType: currentPlayerType,
+          overlay,
+          resetOverlayData,
+          updatePlayPauseLabel,
+          setOverlayMedia,
+          getMpegtsOptions: function() {
+            return {
+              enableWorker: elements.mpegtsEnableWorker.checked,
+              isLive: elements.mpegtsIsLive.checked,
+              liveBufferLatencyChasing: elements.mpegtsLiveBufferLatencyChasing.checked
+            };
+          },
+          ensureScript: function(id, src) {
+            return new Promise(function(resolve, reject) {
+              var existing = document.getElementById(id);
+              if (existing) {
+                if (existing.dataset.loaded === 'true') {
+                  resolve();
+                  return;
+                }
 
-        player.attachMediaElement(videoElement);
+                existing.addEventListener('load', function onLoad() {
+                  existing.removeEventListener('load', onLoad);
+                  resolve();
+                });
+                existing.addEventListener('error', function onError() {
+                  existing.removeEventListener('error', onError);
+                  reject(new Error('Failed to load script: ' + src));
+                });
+                return;
+              }
 
-        player.on(mpegts.Events.ERROR, function(errorType, errorDetail, errorInfo) {
-          console.error('Player error:', errorType, errorDetail, errorInfo);
-        });
-
-        player.on(mpegts.Events.MEDIA_INFO, function(mediaInfo) {
-          console.log('Media info:', mediaInfo);
-        });
-
-        player.on(mpegts.Events.SEI_ARRIVED, function(data) {
-          overlay.pushData(data);
-        });
-
-        player.load();
-        currentUrl = url;
+              var script = document.createElement('script');
+              script.id = id;
+              script.src = src;
+              script.async = false;
+              script.onload = function() {
+                script.dataset.loaded = 'true';
+                resolve();
+              };
+              script.onerror = function() {
+                reject(new Error('Failed to load script: ' + src));
+              };
+              document.body.appendChild(script);
+            });
+          }
+        };
       }
 
-      function updatePlayPauseButton() {
-        if (!player) {
-          playPauseBtn.textContent = '播放';
-          return;
+      function switchPlayer(type) {
+        if (currentController && typeof currentController.destroy === 'function') {
+          currentController.destroy();
         }
 
-        playPauseBtn.textContent = videoElement.paused ? '播放' : '暂停';
-      }
-
-      playPauseBtn.onclick = function() {
-        if (!player) {
-          const url = streamUrlInput.value.trim();
-
-          if (!url) {
-            alert('请输入流地址');
-            return;
-          }
-
-          if (typeof mpegts === 'undefined') {
-            alert('mpegts.js 未加载，请检查示例文件');
-            return;
-          }
-
-          if (!mpegts.getFeatureList().mseLivePlayback) {
-            alert('当前浏览器不支持 MSE');
-            return;
-          }
-
-          if (currentUrl !== url) {
-            destroyPlayer();
-            resetOverlayData();
-            createPlayer(url);
-          }
-
-          player.play();
-          overlay.show();
-          updatePlayPauseButton();
-        } else {
-          if (videoElement.paused) {
-            player.play();
-          } else {
-            player.pause();
-          }
-          updatePlayPauseButton();
-        }
-      };
-
-      stopBtn.onclick = function() {
-        if (!player) {
-          return;
-        }
-
-        destroyPlayer();
+        currentPlayerType = type;
+        togglePlayerView(type);
         resetOverlayData();
-        currentUrl = '';
-        updatePlayPauseButton();
-      };
 
-      fullscreenBtn.onclick = function() {
-        const action = isVideoContainerFullscreen() ? exitFullscreen() : requestContainerFullscreen();
+        const factory = playerFactories[type];
+        if (!factory) {
+          currentController = null;
+          updatePlayPauseLabel(true);
+          return;
+        }
 
+        currentController = factory(buildSharedApi());
+        updatePlayPauseLabel(true);
+      }
+
+      elements.clearLogsBtn.addEventListener('click', function() {
+        clearLogs();
+      });
+
+      elements.fullscreenBtn.addEventListener('click', function() {
+        const action = isContainerFullscreen() ? exitFullscreen() : requestContainerFullscreen();
         Promise.resolve(action).catch(function(error) {
           console.error('Fullscreen error:', error);
           alert('当前环境不支持全屏或切换失败');
         });
-      };
+      });
 
-      toggleDebugBtn.onclick = function() {
-        setDebugPanelVisible(!debugPanelVisible);
-      };
-
-      globalLineWidth.oninput = function(event) {
-        globalLineWidthValue.textContent = event.target.value;
+      elements.globalLineWidth.addEventListener('input', function(event) {
+        elements.globalLineWidthValue.textContent = event.target.value;
         overlay.configure({ lineWidth: parseInt(event.target.value, 10) });
-      };
+      });
 
-      maxDetectionFrames.oninput = function(event) {
-        maxDetectionFramesValue.textContent = event.target.value;
+      elements.maxDetectionFrames.addEventListener('input', function(event) {
+        elements.maxDetectionFramesValue.textContent = event.target.value;
         overlay.configure({ maxDetectionFrames: parseInt(event.target.value, 10) });
-      };
+      });
 
-      showObjectId.onchange = updateLabelFields;
-      showType.onchange = updateLabelFields;
-      showConfidence.onchange = updateLabelFields;
-      showItemDuration.onchange = updateLabelFields;
+      elements.showObjectId.addEventListener('change', updateLabelFields);
+      elements.showType.addEventListener('change', updateLabelFields);
+      elements.showConfidence.addEventListener('change', updateLabelFields);
+      elements.showItemDuration.addEventListener('change', updateLabelFields);
+
+      elements.playerType.addEventListener('change', function(event) {
+        switchPlayer(event.target.value);
+      });
+
+      elements.streamUrl.addEventListener('input', persistStreamUrl);
+      elements.streamUrl.addEventListener('change', persistStreamUrl);
+      elements.streamUrl.addEventListener('blur', persistStreamUrl);
+
+      elements.mpegtsIsLive.addEventListener('change', function() {
+        if (currentPlayerType === 'mpegts') {
+          switchPlayer(currentPlayerType);
+        }
+      });
+
+      elements.mpegtsEnableWorker.addEventListener('change', function() {
+        if (currentPlayerType === 'mpegts') {
+          switchPlayer(currentPlayerType);
+        }
+      });
+
+      elements.mpegtsLiveBufferLatencyChasing.addEventListener('change', function() {
+        if (currentPlayerType === 'mpegts') {
+          switchPlayer(currentPlayerType);
+        }
+      });
+
+      elements.enableDebug.addEventListener('change', function(event) {
+        setDebugEnabled(event.target.checked);
+      });
+
+      elements.playPauseBtn.addEventListener('click', function() {
+        persistStreamUrl();
+        if (currentController && typeof currentController.togglePlayPause === 'function') {
+          currentController.togglePlayPause();
+        }
+      });
+
+      elements.stopBtn.addEventListener('click', function() {
+        if (currentController && typeof currentController.stop === 'function') {
+          currentController.stop();
+        }
+      });
 
       document.addEventListener('fullscreenchange', function() {
         updateFullscreenButton();
@@ -402,27 +606,23 @@
         window.dispatchEvent(new Event('resize'));
       });
 
-      videoElement.addEventListener('play', function() {
-        updatePlayPauseButton();
-      });
-
-      videoElement.addEventListener('pause', function() {
-        updatePlayPauseButton();
-      });
-
       window.addEventListener('beforeunload', function() {
         stopDebugPanel();
-        destroyPlayer();
+        if (currentController && typeof currentController.destroy === 'function') {
+          currentController.destroy();
+        }
         overlay.detachMedia();
       });
 
       updateLabelFields();
-      globalLineWidthValue.textContent = globalLineWidth.value;
-      maxDetectionFramesValue.textContent = maxDetectionFrames.value;
+      restoreStreamUrl();
+      elements.globalLineWidthValue.textContent = elements.globalLineWidth.value;
+      elements.maxDetectionFramesValue.textContent = elements.maxDetectionFrames.value;
       updateFullscreenButton();
-      updatePlayPauseButton();
-      setDebugPanelVisible(true);
-      startDebugPanel();
+      updateLogEmptyState();
+      setDebugEnabled(debugEnabled);
+      togglePlayerView(currentPlayerType);
+      switchPlayer(currentPlayerType);
     })();
   </script>
 </body>
