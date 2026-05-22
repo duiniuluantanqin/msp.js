@@ -1,5 +1,5 @@
 import type { MOSPTextOverlay } from '../parser/parser';
-import type { TextConfig, VideoRect } from './renderer';
+import type { TextConfig, VideoDimensions, VideoRect } from './renderer';
 
 type ResolvedTextConfig = Required<Omit<TextConfig, 'backgroundColor' | 'strokeColor'>> & {
   backgroundColor: string | null;
@@ -8,7 +8,7 @@ type ResolvedTextConfig = Required<Omit<TextConfig, 'backgroundColor' | 'strokeC
 
 type RenderTextOverlayOptions = {
   ctx: CanvasRenderingContext2D;
-  mediaElement: HTMLVideoElement;
+  mediaDimensions: VideoDimensions;
   textOverlay: MOSPTextOverlay;
   videoRect: VideoRect;
   textConfig: ResolvedTextConfig;
@@ -16,12 +16,12 @@ type RenderTextOverlayOptions = {
 
 export function renderTextOverlay({
   ctx,
-  mediaElement,
+  mediaDimensions,
   textOverlay,
   videoRect,
   textConfig
 }: RenderTextOverlayOptions): void {
-  const mapped = mapTextOverlay(mediaElement, textOverlay, videoRect);
+  const mapped = mapTextOverlay(mediaDimensions, textOverlay, videoRect);
   const padding = textConfig.padding;
   const horizontalAlign = textOverlay.flags & 0b11;
   const drawBackground = (textOverlay.flags & 0b100) !== 0;
@@ -87,7 +87,7 @@ export function resolveTextBoxPosition(anchorType: number, x: number, y: number,
   }
 }
 
-function mapTextOverlay(mediaElement: HTMLVideoElement, textOverlay: MOSPTextOverlay, videoRect: VideoRect): VideoRect {
+function mapTextOverlay(mediaDimensions: VideoDimensions, textOverlay: MOSPTextOverlay, videoRect: VideoRect): VideoRect {
   const isNormalized = textOverlay.x <= 1 && textOverlay.y <= 1 && textOverlay.width <= 1 && textOverlay.height <= 1;
   if (isNormalized) {
     return {
@@ -98,8 +98,8 @@ function mapTextOverlay(mediaElement: HTMLVideoElement, textOverlay: MOSPTextOve
     };
   }
 
-  const scaleX = mediaElement.videoWidth ? (videoRect.width / mediaElement.videoWidth) : 0;
-  const scaleY = mediaElement.videoHeight ? (videoRect.height / mediaElement.videoHeight) : 0;
+  const scaleX = mediaDimensions.width ? (videoRect.width / mediaDimensions.width) : 0;
+  const scaleY = mediaDimensions.height ? (videoRect.height / mediaDimensions.height) : 0;
 
   return {
     x: videoRect.x + (textOverlay.x * scaleX),

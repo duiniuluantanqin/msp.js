@@ -1,6 +1,6 @@
 import type { MOSPDetection } from '../parser/parser';
 import { BBoxStyle } from '../parser/parser';
-import type { LabelField, TypeConfig, VideoRect } from './renderer';
+import type { LabelField, TypeConfig, VideoDimensions, VideoRect } from './renderer';
 
 const SupportCornerOnly = false; // For Debug
 
@@ -13,7 +13,7 @@ type DetectionRendererConfig = {
 
 type RenderDetectionOptions = {
   ctx: CanvasRenderingContext2D;
-  mediaElement: HTMLVideoElement;
+  mediaDimensions: VideoDimensions;
   detection: MOSPDetection;
   videoRect: VideoRect;
   config: DetectionRendererConfig;
@@ -22,7 +22,7 @@ type RenderDetectionOptions = {
 
 export function renderDetection({
   ctx,
-  mediaElement,
+  mediaDimensions,
   detection,
   videoRect,
   config,
@@ -51,8 +51,8 @@ export function renderDetection({
     width = detection.bbox.width * videoRect.width;
     height = detection.bbox.height * videoRect.height;
   } else {
-    const scaleX = mediaElement.videoWidth ? (videoRect.width / mediaElement.videoWidth) : 0;
-    const scaleY = mediaElement.videoHeight ? (videoRect.height / mediaElement.videoHeight) : 0;
+    const scaleX = mediaDimensions.width ? (videoRect.width / mediaDimensions.width) : 0;
+    const scaleY = mediaDimensions.height ? (videoRect.height / mediaDimensions.height) : 0;
     centerX = videoRect.x + (detection.bbox.cx * scaleX);
     centerY = videoRect.y + (detection.bbox.cy * scaleY);
     width = detection.bbox.width * scaleX;

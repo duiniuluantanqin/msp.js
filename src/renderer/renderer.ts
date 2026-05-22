@@ -1,6 +1,6 @@
 import type { MOSPData, MOSPDetection, MOSPTextOverlay } from '../parser/parser';
 import { renderDetection as renderDetectionImpl } from './render-detection.js';
-import { renderTextOverlay as renderTextOverlayImpl} from './render-text.js';
+import { renderTextOverlay as renderTextOverlayImpl } from './render-text.js';
 
 export type LabelField = 'object_id' | 'type' | 'confidence' | 'bbox' | 'angle' | 'item_duration';
 
@@ -44,6 +44,11 @@ export interface DebugInfo {
 export type VideoRect = {
   x: number;
   y: number;
+  width: number;
+  height: number;
+};
+
+export type VideoDimensions = {
   width: number;
   height: number;
 };
@@ -540,7 +545,7 @@ export class Renderer {
     if (!this.ctx || !this.mediaElement) return;
     renderDetectionImpl({
       ctx: this.ctx,
-      mediaElement: this.mediaElement,
+      mediaDimensions: this.getMediaDimensions(),
       detection,
       videoRect,
       config: this.config,
@@ -552,11 +557,18 @@ export class Renderer {
     if (!this.ctx || !this.mediaElement) return;
     renderTextOverlayImpl({
       ctx: this.ctx,
-      mediaElement: this.mediaElement,
+      mediaDimensions: this.getMediaDimensions(),
       textOverlay,
       videoRect,
       textConfig: this.config.textConfig
     });
+  }
+
+  private getMediaDimensions(): VideoDimensions {
+    return {
+      width: this.mediaElement?.videoWidth ?? 0,
+      height: this.mediaElement?.videoHeight ?? 0
+    };
   }
 
   private getDisplayedVideoRect(): VideoRect {
