@@ -176,6 +176,12 @@ h1 {
   flex: 0 0 auto;
 }
 
+.stream-url-field {
+  position: relative;
+  flex: 1 1 280px;
+  min-width: 220px;
+}
+
 .debug-panel {
   position: absolute;
   top: 10px;
@@ -244,8 +250,34 @@ h1 {
 }
 
 #streamUrl {
-  flex: 1 1 280px !important;
-  min-width: 220px;
+  width: 100%;
+  padding-right: 32px;
+}
+
+.stream-url-reset {
+  position: absolute;
+  top: 50%;
+  right: 6px;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: #777;
+  font-size: 18px;
+  line-height: 22px;
+  transform: translateY(-50%);
+  cursor: pointer;
+}
+
+.stream-url-reset:hover {
+  background: #eeeeee;
+  color: #222;
+}
+
+.stream-url-reset:active {
+  background: #dddddd;
 }
 
 #playerType {

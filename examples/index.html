@@ -61,12 +61,21 @@
             <option value="h265web_webcodec_hevc">h265web.js(webcodec)</option>
             <option value="h265web_wasm_hevc">h265web.js(wasm)</option>
           </select>
-          <input
-            type="text"
-            id="streamUrl"
-            placeholder="输入直播流地址"
-            value="http://192.168.88.91:7777/live/livestream.live.ts"
-          >
+          <div class="stream-url-field">
+            <input
+              type="text"
+              id="streamUrl"
+              placeholder="输入直播流地址"
+              value="http://192.168.88.91:7777/live/livestream.live.ts"
+            >
+            <button
+              type="button"
+              id="resetStreamUrlBtn"
+              class="stream-url-reset"
+              aria-label="恢复默认直播流地址"
+              title="恢复默认直播流地址"
+            >&times;</button>
+          </div>
         </div>
       </div>
 
@@ -186,6 +195,7 @@
         fullscreenBtn: document.getElementById('fullscreenBtn'),
         playerType: document.getElementById('playerType'),
         streamUrl: document.getElementById('streamUrl'),
+        resetStreamUrlBtn: document.getElementById('resetStreamUrlBtn'),
         enableDebug: document.getElementById('enableDebug'),
         mpegtsEnableWorker: document.getElementById('mpegtsEnableWorker'),
         mpegtsIsLive: document.getElementById('mpegtsIsLive'),
@@ -213,6 +223,7 @@
         bboxCount: document.getElementById('bboxCount')
       };
 
+      const DEFAULT_STREAM_URL = elements.streamUrl.defaultValue;
       const STREAM_URL_STORAGE_KEY = 'mosp.demo.streamUrl';
 
       const overlay = new mosp.MOSPOverlay({
@@ -415,6 +426,18 @@
         }
       }
 
+      function resetStreamUrlToDefault() {
+        elements.streamUrl.value = DEFAULT_STREAM_URL;
+
+        try {
+          window.localStorage.removeItem(STREAM_URL_STORAGE_KEY);
+        } catch (error) {
+          console.warn('清除已保存的流地址失败:', error);
+        }
+
+        elements.streamUrl.focus();
+      }
+
       function getFullscreenElement() {
         return document.fullscreenElement || document.webkitFullscreenElement || null;
       }
@@ -560,6 +583,7 @@
       elements.streamUrl.addEventListener('input', persistStreamUrl);
       elements.streamUrl.addEventListener('change', persistStreamUrl);
       elements.streamUrl.addEventListener('blur', persistStreamUrl);
+      elements.resetStreamUrlBtn.addEventListener('click', resetStreamUrlToDefault);
 
       elements.mpegtsIsLive.addEventListener('change', function() {
         if (currentPlayerType === 'mpegts') {

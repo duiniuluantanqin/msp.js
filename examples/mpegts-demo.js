@@ -41,6 +41,11 @@
     }
 
     function createPlayer(url, options) {
+      console.info('mpegts.js player options:', {
+        isLive: options.isLive,
+        enableWorker: options.enableWorker
+      });
+
       player = mpegts.createPlayer({
         type: 'mse',
         isLive: options.isLive,
